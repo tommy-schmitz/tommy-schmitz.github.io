@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>MonTact</title>
+
+<script type="application/javascript" src="main.js"></script>
+<script type="application/javascript" src="input.js"></script>
+<script type="application/javascript" src="image.js"></script>
+<script type="application/javascript" src="audio.js"></script>
+<script type="application/javascript" src="camera.js"></script>
+<script type="application/javascript" src="world.js"></script>
+<script type="application/javascript" src="unit.js"></script>
+<script type="application/javascript" src="UI.js"></script>
+<script type="application/javascript" src="arrows.js"></script>
+<script type="application/javascript" src="ai.js"></script>
+<script type="application/javascript" src="tutorial.js"></script>
+
+<style>
+html, body {
+	margin:				0;
+	height:				100%;
+}
+
+body {
+	background-color:	#eee;
+}
+
+#center {
+	width:				960px;
+	margin:				auto;
+	padding-top:		1em;
+	padding-bottom:		1em;
+	background-color:	#fff;
+	text-align:			center;
+}
+
+#myCanvas {
+	margin:				auto; 
+	border:				1px solid #bbb;
+}
+
+h1 {
+	margin-top:			0;
+	margin-bottom:		1em;
+	font-family:		sans-serif;
+	font-size:			larger;
+}
+
+h2 {
+	font-family:		sans-serif;
+	font-size:			large;
+	color:				#444;
+}
+
+h2::before, h2::after {
+	position:			relative;
+	content:			'\b7\b7\b7\b7\b7\b7\b7\b7\b7\b7\b7\b7';
+	color:				#bbb;
+}
+h2::before {
+	padding-right:		1em;
+}
+h2::after {
+	padding-left:		1em;
+}
+
+p {
+	width:				40%;
+	margin:				1em auto;
+}
+
+.list-dots {
+	width:				30%;
+	margin:				1em auto;
+	list-style-type:	disc;
+	text-align:			left;
+}
+.list-plain {
+	list-style-type:	none;
+	padding:			0;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="center">
+
+<h1>MonTact</h1>
+
+<p><a href="../">Back to Game Jam index</a></p>
+
+<canvas id="myCanvas" width="800" height="480">
+Your browser does not support the HTML5 canvas tag.
+</canvas>
+
+<h2>About</h2>
+
+<p>Control your monsters (each marked with a red flag)
+and defeat the enemy monsters (each marked with a blue flag)!
+Click a monster to select it, click a blue square to move there,
+and click a red square to attack that enemy. Click on your monster
+after it's moved to wait instead of attacking.</p>
+
+<p>Some monsters have natural affinities for certain terrains, and
+get bonuses to attack and defense while on those squares. Bunnies
+have an affinity for forests and minotaurs have an affinity for
+mountains.</p>
+
+<p>You can move the camera using the w, s, a, and d keys. If you
+have moved all of your monsters that you can see and nothing is
+happening, try looking around.</p>
+
+<h2>Development</h2>
+
+<P>This game was made by Tommy, Shawn, and Eli as part of a game jam that 
+went from Saturday, July 12 to Sunday, July 13, 2014. The basic 
+framework was copied from our previous game jam project,
+<a href='http://eli.marable-family.net/mia'>Mia the Mage</a>.
+Other than that everything in this game was made within those
+two days.</p>
+
+<p>We used the following programs to create this game:</p>
+
+<ul class="list-dots">
+	<li>Music: <a href='http://ariamaestosa.sourceforge.net/'>Aria Maestosa</a></li>
+	<li>Music: <a href='https://www.cakewalk.com/'>Cakewalk Music Creator</a></li>
+	<li>Sound: <a href='https://http://www.bfxr.net/'>Bfxr</a></li>
+	<li>Sound: <a href='http://audacity.sourceforge.net/'>Audacity</a></li>
+	<li>Art: <a href='http://www.gimp.org/'>GIMP</a></li>
+	<li>Art: <a href='http://www.humanbalance.net/gale/us/'>Graphics Gale</a></li>
+	<li>Art: <a href='http://www.adobe.com/'>Adobe Photoshop</a></li>
+	<li>Version Control: <a href='http://git-scm.com/'>Git</a></li>
+	<li>Code Hosting: <a href='https://bitbucket.org/'>BitBucket</a></li>
+</ul>
+
+<h2>Contact</h2>
+
+<ul class="list-plain">
+<li>Tommy Schmitz: <a href="mailto:tschmitz@ucsc.edu">tschmitz@ucsc.edu</a></li>
+<li>Eli Marable: <a href="mailto:edm1234@sbcglobal.net">edm1234@sbcglobal.net</a></li>
+<li>Shawn Hampton: <a href="mailto:thatguyhampton@gmail.com">thatguyhampton@gmail.com</a></li>
+</ul>
+
+</div>
+
+</body>
+
+</html>

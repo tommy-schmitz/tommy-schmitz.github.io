@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Planet Exploder</title>
+
+<script type="application/javascript" src="main.js"></script>
+
+<script type="application/javascript" src="vec.js"></script>
+<script type="application/javascript" src="body.js"></script>
+<script type="application/javascript" src="planet.js"></script>
+<script type="application/javascript" src="ore.js"></script>
+<script type="application/javascript" src="particles.js"></script>
+<script type="application/javascript" src="gamestate.js"></script>
+<script type="application/javascript" src="input.js"></script>
+<script type="application/javascript" src="camera.js"></script>
+<script type="application/javascript" src="UI.js"></script>
+
+<style>
+html, body {
+	margin:				0;
+	height:				100%;
+}
+
+body {
+	background-color:	#eee;
+}
+
+#center {
+	width:				960px;
+	margin:				auto;
+	padding-top:		1em;
+	padding-bottom:		1em;
+	background-color:	#fff;
+	text-align:			center;
+}
+
+#myCanvas {
+	margin:				auto; 
+	border:				1px solid #bbb;
+}
+
+h1 {
+	margin-top:			0;
+	margin-bottom:		1em;
+	font-family:		sans-serif;
+	font-size:			larger;
+}
+
+h2 {
+	font-family:		sans-serif;
+	font-size:			large;
+	color:				#444;
+}
+
+h2::before, h2::after {
+	position:			relative;
+	content:			'\b7\b7\b7\b7\b7\b7\b7\b7\b7\b7\b7\b7';
+	color:				#bbb;
+}
+h2::before {
+	padding-right:		1em;
+}
+h2::after {
+	padding-left:		1em;
+}
+
+p {
+	width:				40%;
+	margin:				1em auto;
+}
+
+.list-dots {
+	width:				40%;
+	margin:				1em auto;
+	list-style-type:	disc;
+	text-align:			left;
+}
+.list-plain {
+	list-style-type:	none;
+	padding:			0;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="center">
+
+<h1>Planet Exploder</h1>
+
+<canvas id="myCanvas" width="800" height="480">
+Your browser does not support the HTML5 canvas tag.
+</canvas>
+
+<h2>Summary of controls</h2>
+<ul class="list-dots">
+  <li>Left mouse button: Thrust</li>
+  <li>Right mouse button: Use tool</li>
+  <li>[1], [2], [A]: Select tool</li>
+  <li>Mouse wheel, [W], [S]: Zoom</li>
+  <li>[C]: Visualize trajectory</li>
+</ul>
+
+<h2>How to play</h2>
+<ul class="list-dots">
+  <li>CONTEXT: You are piloting a space ship. There are planets and asteroids in space with you.</li>
+  <li>GOAL: Land safely on as many planets as you can!</li>
+  <li>TO MOVE: Press and HOLD THE LEFT MOUSE BUTTON to thrust TOWARD THE MOUSE CURSOR. Hold SHIFT to thrust harder.</li>
+  <li>TO REGAIN FUEL: Collect ores from asteroids, and then land on a planet.</li>
+  <li>TO COLLECT ORES: Shoot asteroids with the LASER beam, and then use the TRACTOR beam to collect the shiny ores.</li>
+  <li>TO USE THE LASER BEAM: Press [1] to select the laser beam, and then RIGHT-CLICK on an asteroid.</li>
+  <li>TO USE THE TRACTOR BEAM: First, press [2] to select the TRACTOR beam. Next, aim at an ore with the mouse cursor, and then press and HOLD THE RIGHT MOUSE BUTTON. Finally, move the mouse cursor toward your space ship.</li>
+  <li>TO LAND ON A PLANET: Move your space ship into contact with the planet. Try to land softly, or your ship will take damage!</li>
+  <li>TO ZOOM: Roll the MOUSE WHEEL. Alternatively, press [W] and [S].</li>
+</ul>
+
+<h2>Development</h2>
+
+<P>This game was made for the Ludum Dare 30 Game Jam.
+The theme of the jam was "Connected Worlds." The jam
+ran from 6:00PM Friday, August 22 to 6:00PM Monday,
+August 25, 2014.</p>
+
+<h2>Contact</h2>
+
+<ul class="list-plain">
+<li>Joe Allington: <a href="mailto:joe.can.make.it@gmail.com">joe.can.make.it@gmail.com</a></li>
+<li>Tommy Schmitz: <a href="mailto:tschmitz@ucsc.edu">tschmitz@ucsc.edu</a></li>
+<li>Eli Marable: <a href="mailto:edm1234@sbcglobal.net">edm1234@sbcglobal.net</a></li>
+</ul>
+
+</div>
+
+</body>
+
+</html>

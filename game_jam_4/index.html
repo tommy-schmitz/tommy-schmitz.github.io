@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Dan Man</title>
+
+<script type="application/javascript" src="const.js"></script>
+<script type="application/javascript" src="util.js"></script>
+<script type="application/javascript" src="main.js"></script>
+<script type="application/javascript" src="enemy.js"></script>
+<script type="application/javascript" src="zombie.js"></script>
+<script type="application/javascript" src="bang.js"></script>
+<script type="application/javascript" src="boss.js"></script>
+<script type="application/javascript" src="input.js"></script>
+<script type="application/javascript" src="virtualgamepad.js"></script>
+<script type="application/javascript" src="keyboardInput.js"></script>
+<script type="application/javascript" src="image.js"></script>
+<script type="application/javascript" src="audio.js"></script>
+<script type="application/javascript" src="camera.js"></script>
+<script type="application/javascript" src="collision.js"></script>
+<script type="application/javascript" src="world.js"></script>
+<script type="application/javascript" src="shieldjoe.js"></script>
+<script type="application/javascript" src="gamestate.js"></script>
+<script type="application/javascript" src="ui.js"></script>
+
+<style>
+html, body {
+	margin:				0;
+	height:				100%;
+}
+
+body {
+	background-color:	#eee;
+}
+
+body.freeze {
+	overflow:			hidden;
+}
+
+#center {
+	width:				960px;
+	margin:				auto;
+	padding-top:		1em;
+	padding-bottom:		1em;
+	background-color:	#fff;
+	text-align:			center;
+}
+
+#letterbox {
+	transition:			background 1s;
+}
+
+#letterbox.active {
+	position:			absolute;
+	left:				0;
+	top:				0;
+	right:				0;
+	bottom:				0;
+	background:			black;
+	z-index:			10;
+}
+
+#myCanvas {
+	margin:				auto; 
+	border:				1px solid #bbb;
+}
+
+h1 {
+	margin-top:			0;
+	margin-bottom:		1em;
+	font-family:		sans-serif;
+	font-size:			larger;
+}
+
+h2 {
+	font-family:		sans-serif;
+	font-size:			large;
+	color:				#444;
+}
+
+h2::before, h2::after {
+	position:			relative;
+	content:			'\b7\b7\b7\b7\b7\b7\b7\b7\b7\b7\b7\b7';
+	color:				#bbb;
+}
+h2::before {
+	padding-right:		1em;
+}
+h2::after {
+	padding-left:		1em;
+}
+
+p {
+	width:				40%;
+	margin:				1em auto;
+}
+
+.list-dots {
+	width:				40%;
+	margin:				1em auto;
+	list-style-type:	disc;
+	text-align:			left;
+}
+.list-plain {
+	list-style-type:	none;
+	padding:			0;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="center">
+
+<h1>Dan Man</h1>
+
+<div id="letterbox">
+
+	<canvas id="myCanvas" width="640" height="360">
+	Your browser does not support the HTML5 canvas tag.
+	</canvas>
+
+</div>
+
+<h2>Controls</h2>
+
+Keyboard controls:
+<ul class="list-dots">
+  <li> Spacebar: jump. </li>
+  <li> [F] key: shoot. </li>
+  <li> Arrow keys: move around. </li>
+</ul>
+Touchscreen controls:
+<ul class="list-dots">
+  <li> Touch the screen to make the touchscreen controls appear on the screen.</li>
+  <li> A: jump.</li>
+  <li> B: fire.</li>
+  <li> D-pad: move around.</li>
+</ul>
+
+<h2>About</h2>
+
+<p>
+This game is inspired by <a href="http://en.wikipedia.org/wiki/Mega_Man">Mega Man</a>, 
+made by Capcom (official website: <a href="http://megaman.capcom.com">link</a>).
+</p>
+
+<h2>Development</h2>
+
+<p>
+  This game was made by Joe, Shawn, Eli and Tommy in five days: 
+  Saturday, September 20 to Wednesday, September 24 (2014).
+</p>
+<p>
+  The basic framework was copied from 
+  <a href="http://eli.marable-family.net">our previous game jam projects</a>. 
+  Images of Mega Man and Sniper Joe were taken (and partially adapted) 
+  from the original Mega Man games via various internet sources 
+  ("Google image search"). All other parts 
+  (other artwork, code, and music) were created by our team.
+</p>
+
+<h2>Contact</h2>
+
+<ul class="list-plain">
+<li>Joe Allington: <a href="mailto:joe.can.make.it@gmail.com">joe.can.make.it@gmail.com</a></li>
+<li>Tommy Schmitz: <a href="mailto:tschmitz@ucsc.edu">tschmitz@ucsc.edu</a></li>
+<li>Eli Marable: <a href="mailto:edm1234@sbcglobal.net">edm1234@sbcglobal.net</a></li>
+<li>Shawn Hampton: <a href="mailto:thatguyhampton@gmail.com">thatguyhampton@gmail.com</a></li>
+</ul>
+
+</div>
+
+</body>
+
+</html>

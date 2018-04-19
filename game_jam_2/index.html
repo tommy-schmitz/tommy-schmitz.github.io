@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Castle Mortis</title>
+
+<script type="application/javascript" src="collision.js"></script>
+<script type="application/javascript" src="resources.js"></script>
+<script type="application/javascript" src="decoration.js"></script>
+<script type="application/javascript" src="inventory.js"></script>
+<script type="application/javascript" src="main.js"></script>
+<script type="application/javascript" src="input.js"></script>
+<script type="application/javascript" src="image.js"></script>
+<script type="application/javascript" src="audio.js"></script>
+<script type="application/javascript" src="camera.js"></script>
+<script type="application/javascript" src="gamestate.js"></script>
+<script type="application/javascript" src="ui.js"></script>
+
+<script type="application/javascript" src="player.js"></script>
+<script type="application/javascript" src="enemy.js"></script>
+<script type="application/javascript" src="runner.js"></script>
+<script type="application/javascript" src="tower.js"></script>
+
+<style>
+html, body {
+	margin:				0;
+	height:				100%;
+}
+
+body {
+	background-color:	#eee;
+}
+
+#center {
+	width:				auto;
+	margin:				auto;
+	padding-top:		1em;
+	padding-bottom:		1em;
+	background-color:	#fff;
+	text-align:			center;
+}
+
+#myCanvas {
+	margin:				auto; 
+	border:				1px solid #bbb;
+}
+
+h1 {
+	margin-top:			0;
+	margin-bottom:		1em;
+	font-family:		sans-serif;
+	font-size:			larger;
+}
+
+h2 {
+	font-family:		sans-serif;
+	font-size:			large;
+	color:				#444;
+}
+
+h2::before, h2::after {
+	position:			relative;
+	content:			'\b7\b7\b7\b7\b7\b7\b7\b7\b7\b7\b7\b7';
+	color:				#bbb;
+}
+h2::before {
+	padding-right:		1em;
+}
+h2::after {
+	padding-left:		1em;
+}
+
+p {
+	width:				40%;
+	margin:				1em auto;
+}
+
+.list-dots {
+	width:				30%;
+	margin:				1em auto;
+	list-style-type:	disc;
+	text-align:			left;
+}
+.list-plain {
+	list-style-type:	none;
+	padding:			0;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="center">
+
+<h1>Castle Mortis</h1>
+
+<canvas id="myCanvas" width="800" height="480">
+Your browser does not support the HTML5 canvas tag.
+</canvas>
+
+<h2>About</h2>
+
+<p>Move around using the w, s, a, d keys. Left-click on 
+resources to gather them. Hit 'e' to open a crafting
+menu. Click on an item to craft it. Hit 1, 2, 3, 4 to
+select an item then left-click to place it. Hit the 
+grave key (`/~) to enable delete mode, and left-click
+a tower to delete it.</p>
+
+<p>Collect resources and build defensive towers to 
+survive as long as possible against the zombie hordes!</p>
+
+<h2>Development</h2>
+
+<P>This game was made by Carolyn, Joe, Tommy, Shawn, and Eli as 
+part of a game jam that went from Saturday, August 2 to Sunday,  
+August 3, 2014. The basic framework was copied from our previous 
+game jam projects,
+<a href='http://eli.marable-family.net/mia'>Mia the Mage</a> and
+<a href='http://eli.marable-family.net/montact'>MonTact</a>.
+Other than that everything in this game was made within those
+two days.</p>
+
+<p>We used the following programs to create this game:</p>
+
+<ul class="list-dots">
+	<li>Music: <a href='http://www.noteworthysoftware.com'>Noteworthy Composer</a></li>
+	<li>Sound: <a href='https://http://www.bfxr.net/'>Bfxr</a></li>
+	<li>Sound: <a href='http://audacity.sourceforge.net/'>Audacity</a></li>
+	<li>Art: <a href='http://www.gimp.org/'>GIMP</a></li>
+	<li>Art: <a href='http://www.adobe.com/'>Adobe Photoshop</a></li>
+	<li>Art: <a href='http://www.adobe.com/'>Adobe Flash</a></li>
+	<li>Version Control: <a href='http://git-scm.com/'>Git</a></li>
+	<li>Code Hosting: <a href='https://bitbucket.org/'>BitBucket</a></li>
+</ul>
+
+<h2>Contact</h2>
+
+<ul class="list-plain">
+<li>Carolyn Du: (No email)</li>
+<li>Joe Allington: <a href="mailto:joe.can.make.it@gmail.com">joe.can.make.it@gmail.com</a></li>
+<li>Tommy Schmitz: <a href="mailto:tschmitz@ucsc.edu">tschmitz@ucsc.edu</a></li>
+<li>Eli Marable: <a href="mailto:edm1234@sbcglobal.net">edm1234@sbcglobal.net</a></li>
+<li>Shawn Hampton: <a href="mailto:thatguyhampton@gmail.com">thatguyhampton@gmail.com</a></li>
+</ul>
+
+</div>
+
+</body>
+
+</html>
