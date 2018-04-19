@@ -1,0 +1,150 @@
+<html>
+<head>
+<script>
+window.onload = function() {
+
+
+document.body.innerHTML = `
+  Thomas Schmitz
+  <br />
+  https://tommy-schmitz.github.io
+
+  <h1>Objective</h1>
+
+  Seeking a team project where I can contribute programming skills and logical thinking in any programming language, and where I can improve my skills in face-to-face team collaboration.
+  <br />
+  (Summer 2018 internship)
+
+  <h1>Experience</h1>
+`;
+
+const hobby_gamedev_description = document.createElement('span');
+hobby_gamedev_description.innerHTML = `
+  <ul>
+    <li> Created five video games in collaboration with a small team of friends. </li>
+    <li> <a href="/2014_jams">Please check my website and try them out!</a> </li>
+    <li> Technologies: Javascript, HTML5 Canvas </li>
+  </ul>
+`;
+
+const experience = [
+  [
+    'Ph.D. student in Computer Science',
+    'Sep 2012 - present',
+    'University of California, Santa Cruz',
+    [
+      'Adviser: <a href="https://users.soe.ucsc.edu/~cormac/">Cormac Flanagan</a>',
+      'Published three research papers on computer security using programming languages that support information flow analysis ("Faceted Values").',
+      'Proved mathematical theorems about the security of our formal language semantics.',
+      'Technologies: Haskell, Coq, Javascript',
+    ],
+  ],
+  [
+    'Teaching assistant',
+    'Sep 2012 - present',
+    'University of California, Santa Cruz',
+    [
+      'Led discussion sections and computer lab sessions for several subjects: compiler design, computational models, programming languages, algorithms, operating systems, and computer security.',
+    ],
+  ],
+  [
+    'Programmer',
+    'Jun 2017 - Sep 2017, and Jun 2016 - Sep 2016',
+    'CPM Educational Program',
+    [
+      'Designed and implemented an improved user interface and database for employees to use to enter their hours into the payroll system.',
+      'Technologies: Google Spreadsheets, Google Apps Script, Node.js',
+    ],
+  ],
+  [
+    'Hobby Game Development',
+    'Jun 2014 - Sep 2014',
+    '',
+    [
+      'Created five video games in collaboration with a small team of friends.',
+      '<a href="/2014_jams">Please check my website and try them out!</a>',
+      'Technologies: Javascript, HTML5 Canvas',
+    ],
+  ],
+  [
+    'Software Engineering Intern',
+    'Jun 2012 - Sep 2012',
+    'Google',
+    [
+      'Designed and implemented an algorithm for recognizing scientific documents that mention DNA sequences from the human genome.',
+      'Technologies: C++, map-reduce',
+    ],
+  ],
+  [
+    'Student programmer',
+    'Jun 2011 - Sep 2011',
+    'Battle for Wesnoth (open source project)',
+    [
+      'Designed and implemented a system for real-time collaboration in online multiplayer games.',
+      'Technologies: C++',
+    ],
+  ],
+  [
+    'Subject tutor',
+    'Jan 2011 - Mar 2012',
+    'Learning Support Services (UCSC)',
+    [
+      'Led 1-hour tutoring sessions with 1 to 4 students for several subjects: algebra, calculus, algorithms and data structures.',
+    ],
+  ],
+];
+for(let i=0; i<experience.length; ++i) {
+  const div = document.createElement('div');
+  document.body.appendChild(div);
+
+  const job_title_div = document.createElement('div');
+  div.appendChild(job_title_div);
+  job_title_div.innerText = experience[i][0];
+  Object.assign(job_title_div.style, {
+    display:    'inline-block',
+    width:      '350px',
+    fontWeight: 'bold',
+  });
+
+  const time_div = document.createElement('div');
+  div.appendChild(time_div);
+  time_div.innerText = experience[i][1];
+  Object.assign(time_div.style, {
+    display:    'inline-block',
+    width:      '350px',
+    fontWeight: 'bold',
+  });
+
+  const company_div = document.createElement('div');
+  div.appendChild(company_div);
+  company_div.innerText = experience[i][2];
+  Object.assign(company_div.style, {
+    fontStyle: 'italic',
+  });
+
+  const description_div = document.createElement('div');
+  div.appendChild(description_div);
+  const ul = document.createElement('ul');
+  description_div.appendChild(ul);
+  for(let j=0; j<experience[i][3].length; ++j) {
+    const li = document.createElement('li');
+    ul.appendChild(li);
+    li.innerHTML = experience[i][3][j];
+  }
+}
+
+document.body.innerHTML += `
+  <h1>Education</h1>
+
+  <b>MS Computer Science</b> from UCSC (2016)
+  <br />
+  <b>BS Computer Science</b> and <b>BA Mathematics</b> from UCSC (2012)
+`;
+
+
+};
+</script>
+</head>
+<body>
+</body>
+</html>
