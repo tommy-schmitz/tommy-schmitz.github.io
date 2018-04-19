@@ -1,9 +1,49 @@
-<a href="mia">Mia the Mage in Journey Through the Perilous Swamp</a>
-<br />
-<a href="montact">MonTact</a>
-<br />
-<a href="castle">Castle Mortis</a>
-<br />
-<a href="exploder">Planet Exploder</a>
-<br />
-<a href="danman">Danman</a>
+<html>
+<head>
+<script>
+window.onload = function() {
+
+
+document.title = "Tommy's games from Summer 2014";
+
+const heading = document.createElement('h1');
+heading.innerText = document.title;
+document.body.appendChild(heading);
+
+const make_link = function(id, title) {
+  const div = document.createElement('div');
+  document.body.appendChild(div);
+  Object.assign(div.style, {
+    display: 'inline-block',
+    width:   '144px',
+    height:  '144px',
+  });
+
+  const anchor = document.createElement('a');
+  div.appendChild(anchor);
+  anchor.href = id;
+
+  anchor.appendChild(document.createTextNode(title));
+
+  anchor.appendChild(document.createElement('br'));
+
+  const img = document.createElement('img');
+  anchor.appendChild(img);
+  img.src = 'web_assets/icon_' + id + '.png';
+};
+
+// Make the list of games
+const f = make_link;
+f(      'mia'           , 'Mia the Mage'        );
+f(      'montact'       , 'Montact'             );
+f(      'castle'        , 'Castle Mortis'       );
+f(      'exploder'      , 'Planet Exploder'     );
+f(      'danman'        , 'Dan Man'             );
+
+
+};
+</script>
+</head>
+<body>
+</body>
+</html>
