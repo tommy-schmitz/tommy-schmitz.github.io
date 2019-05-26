@@ -1,0 +1,90 @@
+    <html>
+    <head>
+      <meta name="viewport" content="width=600">
+    </head>
+    <body>
+    <form action="/" method="post">
+      <input
+          name="password_1"
+          id="password_1"
+          type="password"
+          style="width: 400px; height: 50px;"
+          >
+      <br />
+      <br />
+      <input
+          name="password_2"
+          id="password_2"
+          type="password"
+          style="width: 400px; height: 50px;"
+          >
+      <br />
+      <br />
+      <textarea
+          name="text"
+          id="textarea"
+          autofocus
+          style="width: 400px; height: 100px;"
+          >
+      </textarea>
+    </form>
+    <div id="div"></div>
+    <script>
+      window.onload = function() {
+        document.body.style.width = '600px';
+
+        const div = document.getElementById('div');
+        const textarea = document.getElementById('textarea');
+        const password_1 = document.getElementById('password_1');
+        const password_2 = document.getElementById('password_2');
+
+        textarea.value = '';
+
+        const hash = async function(x) {
+          return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(x)))];
+        };
+
+        const update = async function() {
+          let s = '';
+
+          s += Math.random() + '<br />';
+          div.innerHTML = s;
+
+          let a2 = await hash(textarea.value);
+          for(let i=0; i<a2.length; ++i) {
+            if(i % 8 === 0)
+              s += '<br />';
+            s += a2[i].toString(10).padStart(3, '0') + '; ';
+          }
+          div.innerHTML = s;
+
+          const pass = password_1.value;
+          const pass2 = password_2.value;
+          if(pass === ''  ||  pass !== pass2)
+            return;
+
+          let a = [];
+          for(let i=0; i<8; ++i)
+            a = [...a, ...await hash(pass + '' + textarea.value + '' + i)];
+          s += '<pre>';
+          for(let i=0; i<16; ++i) {
+            if(i % 4 === 0)
+              s += '\\n';
+            for(let j=0; j<16; ++j) {
+              if(j % 4 === 0)
+                s += '  ';
+              s += (a[16*i + j] % 10);
+              s += ' ';
+            }
+            s += '\\n';
+          }
+          s += '</pre>';
+          div.innerHTML = s;
+        };
+        textarea.oninput = update;
+        password_1.oninput = update;
+        password_2.oninput = update;
+      };
+    </script>
+    </body>
+    </html>
