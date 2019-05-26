@@ -69,14 +69,14 @@
           s += '<pre>';
           for(let i=0; i<16; ++i) {
             if(i % 4 === 0)
-              s += '\\n';
+              s += '\n';
             for(let j=0; j<16; ++j) {
               if(j % 4 === 0)
                 s += '  ';
               s += (a[16*i + j] % 10);
               s += ' ';
             }
-            s += '\\n';
+            s += '\n';
           }
           s += '</pre>';
           div.innerHTML = s;
