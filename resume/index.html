@@ -10,14 +10,57 @@ document.body.innerHTML = `
   Thomas Schmitz
   <br />
   https://tommy-schmitz.github.io
+`;
+/*
+  <h1>Objectives</h1>
 
+  <b>Immediate objective</b>
+  <ul>
+    <li>
+      I'm seeking team projects where I can make the world a better place by contributing programming skills and logical thinking in any programming language, and where I can improve my skills in team collaboration and entrepreneurship.
+    </li>
+  </ul>
+  <b>Goals</b>
+  <ul>
+    <li>
+      Make universal basic income a reality in the United States.
+    </li>
+    <li>
+      Get Andrew Yang elected president.
+    </li>
+    <li>
+      Do a research project to discover what kinds of computers can be built by human hands from raw materials, so that the person building it can be reasonably certain of its correctness, by virtue of having built it -- the ultimate purpose being to audit the correctness of the usual microscopic computers using interactive proof systems.
+    </li>
+  </ul>
+  <b>Values</b>
+  <ul>
+    <li>
+      Contribute to the open source hardware movement, creative commons, free software, public domain, etc.
+    </li>
+    <li>
+      Contribute to the contact improv and ecstatic dance communities.
+    </li>
+  </ul>
+`;
+*/
+
+document.body.innerHTML += `
   <h1>Objective</h1>
 
-  Seeking a team project where I can contribute programming skills and logical thinking in any programming language, and where I can improve my skills in face-to-face team collaboration.
-
-  <h1>Experience</h1>
+  I'm seeking team projects where I can make the world a better place by contributing programming skills and logical thinking in any programming language, and where I can improve my skills in team collaboration and entrepreneurship.
 `;
 
+document.body.innerHTML += `
+  <h1>Education</h1>
+
+  <b>Ph.D. Computer Science</b> from UCSC (expected Jun 2019)
+  <br />
+  <b>MS Computer Science</b> from UCSC (2016)
+  <br />
+  <b>BS Computer Science</b> and <b>BA Mathematics</b> from UCSC (2012)
+`;
+
+document.body.innerHTML += '<h1>Experience</h1>';
 const experience = [
   [
     'Ph.D. student in Computer Science',
@@ -123,16 +166,6 @@ for(let i=0; i<experience.length; ++i) {
     li.innerHTML = experience[i][3][j];
   }
 }
-
-document.body.innerHTML += `
-  <h1>Education</h1>
-
-  <b>Ph.D. Computer Science</b> from UCSC (expected 2019)
-  <br />
-  <b>MS Computer Science</b> from UCSC (2016)
-  <br />
-  <b>BS Computer Science</b> and <b>BA Mathematics</b> from UCSC (2012)
-`;
 
 
 };
