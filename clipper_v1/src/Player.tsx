@@ -46,8 +46,8 @@ export const use_player = ({on_ready, on_state_change} : {
       const on_state_change_ = (ev:any) => (get_most_recent_on_state_change()(player, ev));
 
       player = new (window as any).YT.Player(div_id, {
-        height: '390',
-        width: '640',
+        height: '100%',
+        width: '100%',
 //        videoId: '...',
         playerVars: {
           playsinline: 1,

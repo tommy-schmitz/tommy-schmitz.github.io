@@ -1,4 +1,4 @@
-import {StrictMode, useRef, useState} from 'react';
+import {useEffect, StrictMode, useRef, useState} from 'react';
 import ReactDOM from 'react-dom';
 
 import {use_timeout, use_interval} from './util';
@@ -7,7 +7,40 @@ import {use_player} from './Player';
 console.log('working 27');
 
 const start_timestamp = 957;
-const end_timestamp = 969 + 150;
+const end_timestamp = 969 + 152;
+
+const Slider = ({type, value, on_change, on_input, style, max, min, step} : {
+        type : string;
+        value : string;
+        max : string;
+        min : string;
+        step : string;
+        style : any;
+        on_input : (ev:any)=>void;
+        on_change : (ev:any)=>void;
+      }) => {
+  const ref = useRef<HTMLInputElement|null>(null);
+
+  useEffect(() => {
+    const element = ref.current;
+
+    if(element === null)
+      throw new Error('assertion failed');
+
+    element.addEventListener('input', on_input);
+    element.addEventListener('change', on_change);
+
+    // Cleaner-upper
+    return () => {
+      element.removeEventListener('change', on_change);
+      element.removeEventListener('input', on_input);
+    };
+  }, [on_input, on_change]);
+
+  return <>
+    <input ref={ref} {...{type, value, style, max, min, step}} />
+  </>;
+};
 
 const App = () => {
   const playing = useRef<boolean>(false);
@@ -15,9 +48,9 @@ const App = () => {
 
   const [is_covered, set_is_covered] = useState<boolean>(true);
   const [cover_background_color, set_cover_background_color] = useState<string>('black');
-  const show = () => (set_is_covered(true));
+  const show = () => (set_is_covered(false));
   const hide = () => {
-    set_is_covered(false)
+    set_is_covered(true)
     set_cover_background_color('black');
   };
   use_timeout({
@@ -90,53 +123,56 @@ const App = () => {
   }, [player]);
  
   return <>
-    {player_ui}
-    <br />
-    <input  type="range"
-            min="0" max="1" step="any"
-            value={slider_value + ''}
-            style={{
-              width: '640px',
-            }}
-            onInput={() => {
+    <div style={{width: '100%', height: '100%'}}>
+      <div style={{position: 'relative', height: 'calc(100% - 100px)'}}>
+        {player_ui}
+        <div style={{
+          backgroundColor: cover_background_color,
+          position: 'absolute',
+          inset: '0'
+        }} />
+      </div>
+      <br />
+      <Slider type="range"
+              min="0" max="1" step="any"
+              value={slider_value + ''}
+              style={{
+                width: '100%',
+              }}
+              on_input={(ev:any) => {
+                console.log('oninput');
+                set_slider_value(ev.target.value);
+                player.pauseVideo();
+                player.seekTo(start_timestamp + slider_value * (end_timestamp - start_timestamp), false);
+              }}
+              on_change={(ev:any) => {
+                console.log('onchange');
+                set_slider_value(ev.target.value);
+                player.seekTo(start_timestamp + slider_value * (end_timestamp - start_timestamp), true);
+                if(playing.current)
+                  player.playVideo();
+              }}
+      />
+      <br />
+      <button onClick={() => {
+              playing.current = true;
+              player.playVideo();
+              if(player.getCurrentTime() >= end_timestamp)
+                player.seekTo(start_timestamp, true);
+            }}>
+        Play
+      </button>
+      <> </>
+      <button onClick={() => {
+              playing.current = false;
               player.pauseVideo();
-              player.seekTo(start_timestamp + slider_value * (end_timestamp - start_timestamp), false);
-            }}
-            onChange={() => {
-              player.seekTo(start_timestamp + slider_value * (end_timestamp - start_timestamp), true);
-              if(playing.current)
-                player.playVideo();
-            }}
-    />
-    <br />
-    <button onClick={() => {
-            playing.current = true;
-            player.playVideo();
-            if(player.getCurrentTime() >= end_timestamp)
-              player.seekTo(start_timestamp, true);
-          }}>
-      Play
-    </button>
-    <button onClick={() => {
-            playing.current = false;
-            player.pauseVideo();
-            hide();
-          }}>
-      Pause
-    </button>
-    {//<button id="stop_button">Stop</button>
-    }
-    <div  id="cover"
-          style={{
-            backgroundColor: 'transparent', //cover_background_color,
-            pointerEvents: 'none',
-            position: 'absolute',
-            left: '8px',
-            top: '8px',
-            width: '640px',
-            height: '390px',
-          }}
-    />
+              hide();
+            }}>
+        Pause
+      </button>
+      {//<button id="stop_button">Stop</button>
+      }
+    </div>
   </>;
 };
 
