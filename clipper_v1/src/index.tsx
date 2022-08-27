@@ -1,22 +1,20 @@
-import {StrictMode} from 'react';
+import {StrictMode, useRef, useState} from 'react';
 import ReactDOM from 'react-dom';
 
+import {use_interval} from './util';
 import {use_player} from './Player';
 
 console.log('working apoinmoinfape23oiw02456');
 
+      const start_timestamp = 969;
+      const end_timestamp = 969 + 150;
+
 /*
-
-      const start_timestamp = 3414;
-      const end_timestamp = 3454;
-
-      let playing = false;
-
       let colorer = null;
       const show = () => {
         if(colorer !== null)
           clearTimeout(colorer);
-        setTimeout(() => {colorer = null; cover.style.backgroundColor = 'rgba(0,0,0,0)';}, 350);
+        colorer = setTimeout(() => {colorer = null; cover.style.backgroundColor = 'rgba(0,0,0,0)';}, 350);
       };
       const hide = () => {
         if(colorer !== null)
@@ -27,15 +25,6 @@ console.log('working apoinmoinfape23oiw02456');
 
       // 4. The API will call this function when the video player is ready.
       function onPlayerReady(event) {
-        player.loadVideoById({
-          videoId: 'Cn_lucBscH4',
-          startSeconds: 3414,
-          endSeconds: 3454,
-          rel: 0,
-          disablekb: '1',
-          autoplay: '0',
-        });
-
         setInterval(() => {
           const current_timestamp = player.getCurrentTime();
           const current_state = player.getPlayerState();
@@ -49,40 +38,10 @@ console.log('working apoinmoinfape23oiw02456');
         }, 500);
       }
 
-      let stopper = null;
-
-      function onPlayerStateChange(event) {
-        if(event.data === YT.PlayerState.PLAYING) {
-          show();
-
-          const current_timestamp = player.getCurrentTime();
-
-          // Disallow playing portions of video that are earlier than the intended start time.
-          if(current_timestamp < start_timestamp - 1)
-            player.seekTo(start_timestamp, true);
-
-          const appropriate_duration = end_timestamp - current_timestamp;
-
-          // Plan to stop the video at the intended end time.
-          if(stopper !== null)
-            clearTimeout(stopper);
-          stopper = setTimeout(() => {stopper = null; player.pauseVideo(); hide();}, 1000 * appropriate_duration);
-        } else {
-          hide();
-        }
-      }
-
       window.addEventListener('load', () => {
         play_button.addEventListener('click', () => {
-          playing = true;
-          player.playVideo();
-          if(player.getCurrentTime() >= end_timestamp)
-            player.seekTo(start_timestamp, true);
         });
         pause_button.addEventListener('click', () => {
-          playing = false;
-          player.pauseVideo();
-          hide();
         });
 //        stop_button.addEventListener('click', () => {
 //          playing = false;
@@ -107,26 +66,105 @@ console.log('working apoinmoinfape23oiw02456');
 
 
 const App = () => {
+  const playing = useRef<boolean>(false);
+  const stopper = useRef<ReturnType<typeof setTimeout>|null>(null);
+
+  const [is_covered, set_is_covered] = useState<boolean>(true);
+  const show = () => (set_is_covered(true));
+  const hide = () => (set_is_covered(false));
+
+  const [slider_value, set_slider_value] = useState<number>(0);
+
   const [player_ui, player] = use_player({
     on_ready: () => {
-    },
-    on_state_change: () => {
+      player.loadVideoById({
+        videoId: 'aF9HeXg65AE',
+        startSeconds: start_timestamp,
+        endSeconds: end_timestamp,
+        rel: 0,
+        disablekb: '1',
+        autoplay: '0',
+      });
+   },
+    on_state_change: (event) => {
+      if(event.data === (window as any).YT.PlayerState.PLAYING) {
+        show();
+
+        const current_timestamp = player.getCurrentTime();
+
+        // Disallow playing portions of video that are earlier than the intended start time.
+        if(current_timestamp < start_timestamp - 1)
+          player.seekTo(start_timestamp, true);
+
+        const appropriate_duration = end_timestamp - current_timestamp;
+
+        // Plan to stop the video at the intended end time.
+        if(stopper.current !== null)
+          clearTimeout(stopper.current);
+        stopper.current = setTimeout(() => {stopper.current = null; player.pauseVideo(); hide();}, 1000 * appropriate_duration);
+      } else {
+        hide();
+      }
     },
   });
 
+  use_interval({
+    compute_phase_shift: () => (0),
+    compute_wavelength: () => {
+      if(player === null) {
+        return null;
+      } else {
+        return 500;
+      }
+    },
+    callback: () => {
+      const current_timestamp = player.getCurrentTime();
+      const current_state = player.getPlayerState();
+      if(current_state === (window as any).YT.PlayerState.PLAYING) {
+        set_slider_value((current_timestamp - start_timestamp) / (end_timestamp - start_timestamp));
+        if(current_timestamp > end_timestamp) {
+          player.pauseVideo();
+          hide();
+        }
+      }
+    },
+  }, [player]);
+ 
   return <>
     {player_ui}
     <br />
     <input  type="range"
             min="0" max="1" step="any"
-            value="0"
+            value={slider_value + ''}
             style={{
               width: '640px',
             }}
+            onInput={() => {
+              player.pauseVideo();
+              player.seekTo(start_timestamp + slider_value * (end_timestamp - start_timestamp), false);
+            }}
+            onChange={() => {
+              player.seekTo(start_timestamp + slider_value * (end_timestamp - start_timestamp), true);
+              if(playing.current)
+                player.playVideo();
+            }}
     />
     <br />
-    <button id="play_button">Play</button>
-    <button id="pause_button">Pause</button>
+    <button onClick={() => {
+            playing.current = true;
+            player.playVideo();
+            if(player.getCurrentTime() >= end_timestamp)
+              player.seekTo(start_timestamp, true);
+          }}>
+      Play
+    </button>
+    <button onClick={() => {
+            playing.current = false;
+            player.pauseVideo();
+            hide();
+          }}>
+      Pause
+    </button>
     {//<button id="stop_button">Stop</button>
     }
     <div  id="cover"
