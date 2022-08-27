@@ -2,7 +2,7 @@ import {useEffect, StrictMode, useRef, useState} from 'react';
 import ReactDOM from 'react-dom';
 import lzstring from 'lz-string';
 
-import {use_timeout, use_interval} from './util';
+import {compress_into_base_58, decompress_from_base_58, use_timeout, use_interval} from './util';
 import {use_player} from './Player';
 
 console.log('working 27');
@@ -12,7 +12,7 @@ const url_data = (() => {
     const s1 = new URL(document.location.href).searchParams.get('data');
     if(s1 === null)
       throw 0;
-    const encoded_string = lzstring.decompressFromEncodedURIComponent(s1);
+    const encoded_string = decompress_from_base_58(s1);
     if(encoded_string === null)
       throw 0;
     return JSON.parse(encoded_string);
@@ -23,7 +23,7 @@ const url_data = (() => {
 
 const print = (json:any) => {
   console.log(JSON.stringify(json));
-  console.log(lzstring.compressToEncodedURIComponent(JSON.stringify(json)));
+  console.log(compress_into_base_58(JSON.stringify(json)));
 };
 
 print([
