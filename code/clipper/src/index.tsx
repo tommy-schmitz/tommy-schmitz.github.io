@@ -76,10 +76,43 @@ const Slider = ({type, value, on_change, on_input, style, max, min, step} : {
   </>;
 };
 
+const use_is_full_screen = () => {
+  const [state, set_state] = useState<boolean>(false);
+
+  useEffect(() => {
+    const listener = () => {
+      set_state(document.fullscreenElement !== null);
+    };
+
+    document.addEventListener('fullscreenchange', listener);
+    // Cleaner-upper:
+    return () => {
+      document.removeEventListener('fullscreenchange', listener);
+    };
+  }, []);
+
+  return state;
+};
+
 const AppHelper = () => {
   const player_div_ref = useRef<HTMLDivElement|null>(null);
   const playing = useRef<boolean>(false);
   const stopper = useRef<ReturnType<typeof setTimeout>|null>(null);
+
+  const is_full_screen = use_is_full_screen();
+  const [is_timer_expired, set_is_timer_expired] = useState<boolean>(false);  // Initial value is irrelevant
+  use_timeout({
+    compute_delay: () => {
+      if(is_timer_expired) {
+        return null;
+      } else {
+        return 2000;
+      }
+    },
+    callback: () => {
+      set_is_timer_expired(true);
+    },
+  }, [is_timer_expired]);
 
   const [is_covered, set_is_covered] = useState<boolean>(true);
   const [cover_background_color, set_cover_background_color] = useState<string>('black');
@@ -164,12 +197,23 @@ const AppHelper = () => {
 
   return <>
     <div style={{width: '100%', height: '100%'}}>
-      <div ref={player_div_ref} style={{position: 'relative', height: 'calc(100% - '+controls_height+'px)'}}>
+      <div ref={player_div_ref} style={{position: 'relative', height: 'calc(100% - '+controls_height+'px)', userSelect: 'none'}}
+            onClick={() => {
+              set_is_timer_expired(false);
+            }}
+            >
         {player_ui}
         <div style={{
           backgroundColor: cover_background_color,
           position: 'absolute',
-          inset: '0'
+          inset: '0',
+        }} />
+        <img style={{right: '0', bottom: '0', position: 'absolute', transition: 'opacity 0.5s', opacity: ((is_full_screen  &&  !is_timer_expired)  ?  '50%'  :  '0')}} src="full_screen_icon.png" onClick={() => {
+          if(!is_timer_expired) {
+            document.exitFullscreen();
+          } else {
+            // Do nothing
+          }
         }} />
       </div>
       <div style={{height: controls_height+'px'}}>
@@ -234,6 +278,7 @@ const AppHelper = () => {
               throw new Error('assertion failed');
 
             div.requestFullscreen();
+            set_is_timer_expired(true);
           }} />
         </div>
       </div>
