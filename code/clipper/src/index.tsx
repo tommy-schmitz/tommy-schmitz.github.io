@@ -75,6 +75,7 @@ const Slider = ({type, value, on_change, on_input, style, max, min, step} : {
 };
 
 const AppHelper = () => {
+  const player_div_ref = useRef<HTMLDivElement|null>(null);
   const playing = useRef<boolean>(false);
   const stopper = useRef<ReturnType<typeof setTimeout>|null>(null);
 
@@ -156,7 +157,7 @@ const AppHelper = () => {
  
   return <>
     <div style={{width: '100%', height: '100%'}}>
-      <div style={{position: 'relative', height: 'calc(100% - 100px)'}}>
+      <div ref={player_div_ref} style={{position: 'relative', height: 'calc(100% - 100px)'}}>
         {player_ui}
         <div style={{
           backgroundColor: cover_background_color,
@@ -186,24 +187,35 @@ const AppHelper = () => {
               }}
       />
       <br />
-      <button onClick={() => {
-              playing.current = true;
-              player.playVideo();
-              if(player.getCurrentTime() >= end_timestamp)
-                player.seekTo(start_timestamp, true);
-            }}>
-        Play
-      </button>
-      <> </>
-      <button onClick={() => {
-              playing.current = false;
-              player.pauseVideo();
-              hide();
-            }}>
-        Pause
-      </button>
-      {//<button id="stop_button">Stop</button>
-      }
+      <div style={{float: 'left'}}>
+        <button onClick={() => {
+                playing.current = true;
+                player.playVideo();
+                if(player.getCurrentTime() >= end_timestamp)
+                  player.seekTo(start_timestamp, true);
+              }}>
+          Play
+        </button>
+        <> </>
+        <button onClick={() => {
+                playing.current = false;
+                player.pauseVideo();
+                hide();
+              }}>
+          Pause
+        </button>
+        {//<button id="stop_button">Stop</button>
+        }
+      </div>
+      <div style={{float: 'right'}}>
+        <img src="public/full_screen_icon.png" onClick={() => {
+          const div = player_div_ref.current;
+          if(div === null)
+            throw new Error('assertion failed');
+
+          div.requestFullscreen();
+        }} />
+      </div>
     </div>
   </>;
 };
