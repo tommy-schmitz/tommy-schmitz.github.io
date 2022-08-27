@@ -1,13 +1,45 @@
 import {useEffect, StrictMode, useRef, useState} from 'react';
 import ReactDOM from 'react-dom';
+import lzstring from 'lz-string';
 
 import {use_timeout, use_interval} from './util';
 import {use_player} from './Player';
 
 console.log('working 27');
 
-const start_timestamp = 957;
-const end_timestamp = 969 + 152;
+const url_data = (() => {
+  try {
+    const s1 = new URL(document.location.href).searchParams.get('data');
+    if(s1 === null)
+      throw 0;
+    const encoded_string = lzstring.decompressFromEncodedURIComponent(s1);
+    if(encoded_string === null)
+      throw 0;
+    return JSON.parse(encoded_string);
+  } catch(_) {
+    return null;
+  }
+})();
+
+const print = (json:any) => {
+  console.log(JSON.stringify(json));
+  console.log(lzstring.compressToEncodedURIComponent(JSON.stringify(json)));
+};
+
+print([
+  'aF9HeXg65AE',
+  957,
+  969 + 152,
+]);
+print([
+  'Cn_lucBscH4',
+  3414,
+  3454,
+]);
+
+const video_id = url_data?.[0];
+const start_timestamp = url_data?.[1];
+const end_timestamp = url_data?.[2];
 
 const Slider = ({type, value, on_change, on_input, style, max, min, step} : {
         type : string;
@@ -42,7 +74,7 @@ const Slider = ({type, value, on_change, on_input, style, max, min, step} : {
   </>;
 };
 
-const App = () => {
+const AppHelper = () => {
   const playing = useRef<boolean>(false);
   const stopper = useRef<ReturnType<typeof setTimeout>|null>(null);
 
@@ -70,7 +102,7 @@ const App = () => {
     on_ready: (player) => {
       console.log('tommy 28');
       player.loadVideoById({
-        videoId: 'aF9HeXg65AE',
+        videoId: video_id,
         startSeconds: start_timestamp,
         endSeconds: end_timestamp,
         rel: 0,
@@ -174,6 +206,14 @@ const App = () => {
       }
     </div>
   </>;
+};
+
+const App = () => {
+  if(url_data === null) {
+    return <>error</>;
+  } else {
+    return <AppHelper />;
+  }
 };
 
 ReactDOM.render(
