@@ -7,6 +7,8 @@ import {use_player} from './Player';
 
 console.log('working 27');
 
+const slider_height = 16;
+
 const url_data = (() => {
   try {
     const s1 = new URL(document.location.href).searchParams.get('data');
@@ -154,10 +156,15 @@ const AppHelper = () => {
       }
     },
   }, [player]);
- 
+
+  const controls_height = 80;
+  const height_2 = controls_height - slider_height;
+  const button_margin = 16;
+  const button_height = height_2 - button_margin * 2;
+
   return <>
     <div style={{width: '100%', height: '100%'}}>
-      <div ref={player_div_ref} style={{position: 'relative', height: 'calc(100% - 100px)'}}>
+      <div ref={player_div_ref} style={{position: 'relative', height: 'calc(100% - '+controls_height+'px)'}}>
         {player_ui}
         <div style={{
           backgroundColor: cover_background_color,
@@ -165,56 +172,70 @@ const AppHelper = () => {
           inset: '0'
         }} />
       </div>
-      <br />
-      <Slider type="range"
-              min="0" max="1" step="any"
-              value={slider_value + ''}
-              style={{
-                width: '100%',
-              }}
-              on_input={(ev:any) => {
-                console.log('oninput');
-                set_slider_value(ev.target.value);
-                player.pauseVideo();
-                player.seekTo(start_timestamp + slider_value * (end_timestamp - start_timestamp), false);
-              }}
-              on_change={(ev:any) => {
-                console.log('onchange');
-                set_slider_value(ev.target.value);
-                player.seekTo(start_timestamp + slider_value * (end_timestamp - start_timestamp), true);
-                if(playing.current)
+      <div style={{height: controls_height+'px'}}>
+        <Slider type="range"
+                min="0" max="1" step="any"
+                value={slider_value + ''}
+                style={{
+                  width: '100%',
+                  height: slider_height+'px',
+                }}
+                on_input={(ev:any) => {
+                  console.log('oninput');
+                  set_slider_value(ev.target.value);
+                  player.pauseVideo();
+                  player.seekTo(start_timestamp + slider_value * (end_timestamp - start_timestamp), false);
+                }}
+                on_change={(ev:any) => {
+                  console.log('onchange');
+                  set_slider_value(ev.target.value);
+                  player.seekTo(start_timestamp + slider_value * (end_timestamp - start_timestamp), true);
+                  if(playing.current)
+                    player.playVideo();
+                }}
+        />
+        <br />
+        <div style={{float: 'left'}}>
+          <button
+                onClick={() => {
+                  playing.current = true;
                   player.playVideo();
-              }}
-      />
-      <br />
-      <div style={{float: 'left'}}>
-        <button onClick={() => {
-                playing.current = true;
-                player.playVideo();
-                if(player.getCurrentTime() >= end_timestamp)
-                  player.seekTo(start_timestamp, true);
-              }}>
-          Play
-        </button>
-        <> </>
-        <button onClick={() => {
-                playing.current = false;
-                player.pauseVideo();
-                hide();
-              }}>
-          Pause
-        </button>
-        {//<button id="stop_button">Stop</button>
-        }
-      </div>
-      <div style={{float: 'right'}}>
-        <img src="public/full_screen_icon.png" onClick={() => {
-          const div = player_div_ref.current;
-          if(div === null)
-            throw new Error('assertion failed');
+                  if(player.getCurrentTime() >= end_timestamp)
+                    player.seekTo(start_timestamp, true);
+                }}
+                style={{
+                  margin: button_margin+'px',
+                  height: button_height+'px',
+                }}
+                >
+            Play
+          </button>
+          <> </>
+          <button
+                onClick={() => {
+                  playing.current = false;
+                  player.pauseVideo();
+                  hide();
+                }}
+                style={{
+                  margin: button_margin+'px',
+                  height: button_height+'px',
+                }}
+                >
+            Pause
+          </button>
+          {//<button id="stop_button">Stop</button>
+          }
+        </div>
+        <div style={{float: 'right'}}>
+          <img src="full_screen_icon.png" style={{height: height_2+'px'}} onClick={() => {
+            const div = player_div_ref.current;
+            if(div === null)
+              throw new Error('assertion failed');
 
-          div.requestFullscreen();
-        }} />
+            div.requestFullscreen();
+          }} />
+        </div>
       </div>
     </div>
   </>;
