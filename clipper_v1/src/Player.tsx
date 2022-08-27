@@ -1,5 +1,7 @@
-import {useEffect, useRef} from 'react';
+import {useEffect, useState} from 'react';
 import {ObjectId} from 'bson';
+
+import {use_prop_getter} from './util';
 
 const make_oid = () => {
   return new ObjectId() + '';
@@ -26,15 +28,24 @@ const wait_for_scripts_to_load = () => {
 };
 
 export const use_player = ({on_ready, on_state_change} : {
-        on_ready : ()=>void;
-        on_state_change : (x:any)=>void;
+        on_ready : (player:any)=>void;
+        on_state_change : (player:any, ev:any)=>void;
       }) => {
-  const ref = useRef<any>(null);
+  const [player, set_player] = useState<any>(null);
+
+  const get_most_recent_on_ready = use_prop_getter(on_ready);
+  const get_most_recent_on_state_change = use_prop_getter(on_state_change);
 
   useEffect(() => {
     (async() => {
       await wait_for_scripts_to_load();
-      ref.current = new (window as any).YT.Player(div_id, {
+
+      let player : any = null;
+
+      const on_ready_ = () => (get_most_recent_on_ready()(player));
+      const on_state_change_ = (ev:any) => (get_most_recent_on_state_change()(player, ev));
+
+      player = new (window as any).YT.Player(div_id, {
         height: '390',
         width: '640',
 //        videoId: '...',
@@ -43,17 +54,18 @@ export const use_player = ({on_ready, on_state_change} : {
           controls: 0,
         },
         events: {
-          'onReady': on_ready,
-          'onStateChange': on_state_change,
+          'onReady': on_ready_,
+          'onStateChange': on_state_change_,
         }
       });
+      set_player(player);
     })();
-  });
+  }, []);
 
   const div_id = make_oid();
 
   return [
     <div id={div_id} />,
-    ref.current,
+    player,
   ];
 };
