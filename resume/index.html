@@ -6,6 +6,18 @@ window.onload = function() {
 
 document.title = "Tommy's resume";
 
+const css = document.createElement('style');
+css.innerText = `
+  h1 {
+    margin-top: 0.33em;
+    margin-bottom: 0.33em;
+  }
+  ul {
+    margin: 5px;
+  }
+`;
+document.head.appendChild(css);
+
 document.body.innerHTML = `
   Thomas Schmitz
   <br />
@@ -47,7 +59,7 @@ document.body.innerHTML = `
 document.body.innerHTML += `
   <h1>Objective</h1>
 
-  I'm seeking a project where I can contribute software development skills, and where I can improve my skill at building and deploying reliable back-end technology.
+  I'm seeking a role where I can contribute software development skills and expertise in programming languages, and where I can improve my skill at building and deploying reliable back-end technology.
 `;
 
 document.body.innerHTML += `
@@ -67,12 +79,14 @@ const experience = [
     'January 2022 - present',
     'CPM Educational Program',
     [
-      'Implemented 50 educational activities for students to use in web browsers. (React, Typescript)',
-      'Implemented a few prosemirror plugins for inserting math symbols and special links. (Prosemirror)',
+      'Implemented 40 educational activities for students to use in web browsers. (React, Typescript)',
+      'Implemented internal tools for creating and editing activities without having to write code.',
       'Transitioned the dev team to use a monorepo structure. (NPM Workspaces)',
+      'Automated development tasks: incrementing package versions; rebuilding packages that have changed.',
+      'Implemented Prosemirror plugins: one for inserting math symbols; one for inserting special links.',
       'Taught a short course on Programming Languages (implementing part of a Javascript interpreter).',
-      'Received (and completed) backend coding tasks delegated by more senior developers. (Jira tickets, Slack Huddles)',
-      'Technologies: Typescript, React, Node.js, Express, Rollup, Prosemirror, Zod, socket.io',
+      'Technologies: Typescript, React, MongoDB, Node.js, Express, Rollup, Prosemirror, Zod, socket.io',
+      'Workflow tools: Git, Jira, Bitbucket pull requests, Slack Huddles, VSCode LiveShare.',
     ],
   ],
   [
@@ -91,7 +105,7 @@ const experience = [
     [
       'Implemented a 3D educational experience for teaching students about computer networking concepts.',
       'Programmed both front-end and back-end.',
-      'Automated the translation of the professor\'s curriculum (written in a Google Spreadsheet) into C# code.',
+      'Automated the conversion of the professor\'s curriculum (written in a Google Spreadsheet) into C# code.',
       'Technologies: ZSpace, Javascript, Unity3D, C#, Node.js, socket.io, Cisco Packet Tracer API',
     ],
   ],
@@ -173,6 +187,10 @@ const experience = [
 ];
 for(let i=0; i<experience.length; ++i) {
   const div = document.createElement('div');
+  Object.assign(div.style, {
+    marginTop: '10px',
+    marginBottom: '5px',
+  });
   document.body.appendChild(div);
 
   const job_title_div = document.createElement('div');
@@ -180,7 +198,7 @@ for(let i=0; i<experience.length; ++i) {
   job_title_div.innerText = experience[i][0];
   Object.assign(job_title_div.style, {
     display:    'inline-block',
-    width:      '350px',
+    width:      '240px',
     fontWeight: 'bold',
   });
 
@@ -188,8 +206,9 @@ for(let i=0; i<experience.length; ++i) {
   div.appendChild(time_div);
   time_div.innerText = experience[i][1];
   Object.assign(time_div.style, {
+    textAlign: 'right',
     display:    'inline-block',
-    width:      '350px',
+    width:      '310px',
     fontWeight: 'bold',
   });
 
