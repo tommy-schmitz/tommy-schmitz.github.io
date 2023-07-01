@@ -19,9 +19,16 @@ css.innerText = `
 document.head.appendChild(css);
 
 document.body.innerHTML = `
-  Thomas Schmitz
-  <br />
-  https://tommy-schmitz.github.io
+  <div style="display: flex; justify-content: space-between;">
+    <div style="display: inline-block; vertical-align: top;">
+      Thomas Schmitz
+      <br />
+      https://tommy-schmitz.github.io
+    </div>
+    <div style="display: inline-block; text-align: right; vertical-align: top;">
+      ${'' /*email address can go here*/}
+    </div>
+  </div>
 `;
 /*
   <h1>Objectives</h1>
