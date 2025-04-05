@@ -23,22 +23,6 @@ const url_data = (() => {
   }
 })();
 
-const print = (json:any) => {
-  console.log(JSON.stringify(json));
-  console.log(compress_into_base_58(JSON.stringify(json)));
-};
-
-print([
-  'aF9HeXg65AE',
-  957,
-  969 + 152,
-]);
-print([
-  'Cn_lucBscH4',
-  3414,
-  3454,
-]);
-
 const video_id = url_data?.[0];
 const start_timestamp = url_data?.[1];
 const end_timestamp = url_data?.[2];
