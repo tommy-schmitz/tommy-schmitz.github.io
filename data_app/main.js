@@ -250,6 +250,8 @@ const main = async() => {
                                                              {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']);
         await sleep(1000);
         sock.emit('interlocutor should hear', {type: 'encrypted', ciphertext: await encrypt(symmetric_key, 'foo ' + Math.random())});
+      } else {
+        console.log('invalid signature');
       }
     } else if(message.type === 'encrypted') {
       console.log(await decrypt(symmetric_key, message.ciphertext));
