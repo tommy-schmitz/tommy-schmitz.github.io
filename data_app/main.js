@@ -291,12 +291,14 @@ const main = async() => {
   console.log({self_device_id});
 
   function replay(history) {
-    let state = [];
+    const state = [];
     let device_id = 0;
-    let next_ids = [2, 1];
-    for (let op of history) {
-      if (op.type === 'device_id') device_id = op.value;
-      if (op.type === 'add') {
+    const next_ids = [2, 1];
+    const tombstones = {};
+    for(let op of history) {
+      if(op.type === 'device_id') {
+        device_id = op.value;
+      } else if(op.type === 'add') {
         const idx = state.findIndex(c => c.id === op.id_to_left);
         const pos = idx === -1 ? 0 : idx + 1;
         const chars = [...op.text].map((c, i) => ({
@@ -304,21 +306,31 @@ const main = async() => {
           c
         }));
         state.splice(pos, 0, ...chars);
-      }
-      if (op.type === 'remove') {
+      } else if (op.type === 'remove') {
         if(op.id_to_right === 0) {
-          state.splice(state.length - op.text.length, op.text.length);
+          const idx = state.length - op.text.length;
+          const id_to_left = ((idx === 0) ? 0 : state[idx-1].id);
+          for(let i=idx; i<idx+op.text.length; ++i)
+            tombstones[state[i].id] = id_to_left;
+          state.splice(idx, op.text.length);
         } else {
           const idx = state.findIndex(c => c.id === op.id_to_right);
+          const id_to_left = ((idx === 0) ? 0 : state[idx-1].id);
+          for(let i=idx; i<idx+op.text.length; ++i)
+            tombstones[state[i].id] = id_to_left;
           if(idx > 0) {
             state.splice(idx - op.text.length, op.text.length);
           } else {
             throw 1236;
           }
         }
+      } else if(op.type === 'timestamp') {
+        // Do nothing
+      } else {
+        throw 1237;
       }
     }
-    return state;
+    return {current: state, device_id, next_ids, tombstones};
   }
 
   let ephemeral_data = {timestamp: Date.now(), device_id: 0, next_ids: [2, 1], tombstones: {}};
@@ -357,12 +369,29 @@ const main = async() => {
     data.current.splice(index, removed.length, ...new_elements);
     console.log(JSON.parse(JSON.stringify({data, ephemeral_data})));
     const replayed = replay(data.history);
-    if(JSON.stringify(replayed) !== JSON.stringify(data.current))
+    if(JSON.stringify(replayed.current) !== JSON.stringify(data.current))
       throw (console.error({data, replayed}), 1235);
+    localStorage.setItem('main_text_box_history', JSON.stringify(data.history));
   };
 
   const textarea = document.createElement('textarea');
-  let prev_value = textarea.value;
+  let prev_value = (() => {
+    const stored = localStorage.getItem('main_text_box_history');
+    if(stored === null) {
+      return '';
+    } else {
+      const stored_history = JSON.parse(stored);
+      const replayed = replay(stored_history);
+      data.history.splice(0, data.history.length, ...stored_history);
+      data.current.splice(0, data.current.length, ...replayed.current);
+      Object.assign(ephemeral_data.tombstones, replayed.tombstones);
+      ephemeral_data.timestamp = replayed.timestamp;
+      ephemeral_data.next_ids.splice(0, ephemeral_data.next_ids.length, ...replayed.next_ids);
+      ephemeral_data.device_id = replayed.device_id;
+      return data.current.map(({c}) => (c)).join('');
+    }
+  })();
+  textarea.value = prev_value;
   let start;
   let end;
   textarea.addEventListener('beforeinput', (ev) => {
