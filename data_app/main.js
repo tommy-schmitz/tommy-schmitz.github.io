@@ -267,10 +267,63 @@ const main = async() => {
 
   await interlocutor_available_promise;
 
-  const data = {public_key: await export_public_key(temp_keys.publicKey), timestamp: Date.now()};
-  sock.emit('interlocutor should hear', {type: 'set public key', data, signature: await digitally_sign(master_private_key, data)});
+  // Transmit transient public key:
+  {
+    const data = {public_key: await export_public_key(temp_keys.publicKey), timestamp: Date.now()};
+    sock.emit('interlocutor should hear', {type: 'set public key', data, signature: await digitally_sign(master_private_key, data)});
+  }
 
-  ui.main_page_body.innerText = 'reached the end of the program';
+  const device_id = await (async() => {
+    const mk = await export_public_key(master_public_key);
+    const pk = await export_public_key(partner_key);
+
+    if(mk === pk)
+      throw new Error('Cannot compute device_id: both users are using the same public key');
+
+    if(mk === [mk, pk].sort()[0]) {
+      return 0;
+    } else {
+      return 1;
+    }
+  })();
+  console.log({device_id});
+
+  let data = {current: [], history: [], next_id: 0};
+  const process_change = ({prev_value, removed, inserted, index, new_value}) => {
+    data.history.push({removed, inserted, id_to_left: data.current[index].id});
+    const new_elements = [...inserted].map((c) => {
+      return {
+        id: 2*(data.next_id++) + device_id,
+        c,
+      };
+    });
+    data.current.splice(index, removed.length, ...new_elements);
+    console.log(JSON.parse(JSON.stringify({data})));
+  };
+
+  const textarea = document.createElement('textarea');
+  let prev_value = textarea.value;
+  let start;
+  let end;
+  textarea.addEventListener('beforeinput', (ev) => {
+    //console.log({ev, value: ev.target.value, target_ranges: ev.getTargetRanges(), selection_start: ev.target.selectionStart});
+    start = textarea.selectionStart;
+    end = textarea.selectionEnd;
+  });
+  textarea.addEventListener('input', (e) => {
+    const new_value = textarea.value;
+    const removed = prev_value.slice(start, end);
+    const inserted = new_value.slice(start, start + (new_value.length - prev_value.length + removed.length));
+    const expected_new_value = prev_value.slice(0, start) + inserted + prev_value.slice(end);
+    if(expected_new_value !== new_value)
+      throw (console.error({prev_value, start, end, removed, inserted, expected_new_value, new_value}), 1234);
+    //console.log({removed, inserted, at: start});
+    process_change({prev_value, removed, inserted, index: start, new_value});
+    prev_value = new_value;
+  });
+
+  ui.main_page_body.innerText = '';
+  ui.main_page_body.appendChild(textarea);
 };
 
 main();
