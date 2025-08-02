@@ -46,11 +46,11 @@ const initialize_ui = () => {
 };
 
 const RELAY_SERVER_URL = (() => {
-  if(window.location.hostname === 'localhost') {
-    return 'http://localhost:6003';
-  } else {
+//  if(window.location.hostname === 'localhost') {
+//    return 'http://localhost:6003';
+//  } else {
     return 'https://relay-server-13u9.onrender.com';
-  }
+//  }
 })();
 
 const get_master_keys = async(ui) => {
