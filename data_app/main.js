@@ -32,6 +32,8 @@ const initialize_socket_io = async() => {
   return window.io;
 };
 
+const sleep = (millis) => (new Promise((resolve, reject) => (setTimeout(resolve, millis))));
+
 const initialize_ui = () => {
   document.body.innerHTML = '';
   document.body.style.fontFamily = 'sans-serif';
@@ -148,25 +150,69 @@ const get_keys = async({ui, sock}) => {
   }
 };
 
-const digitally_sign = async(private_key, data) => {
-  const temp = await window.crypto.subtle.sign({name: 'ECDSA', hash: {name: 'SHA-384'}},
-                                               private_key, new TextEncoder().encode(JSON.stringify(data)));
-  const bytes = new Uint8Array(temp);
+const encode_binary = (bytes) => {
   let binary = '';
-  for (const byte of bytes) {
+  for(const byte of bytes)
     binary += String.fromCharCode(byte);
-  }
+  console.log('digitally_sign return', {binary});
   return binary;
 };
 
-const check_signature = async(public_key, data, signature) => {
-  const len = signature.length;
+const decode_binary = (binary) => {
+  const len = binary.length;
   const buffer = new ArrayBuffer(len);
   const bytes = new Uint8Array(buffer);
-  for(let i = 0; i<len; i++)
-    bytes[i] = signature.charCodeAt(i);
+  for(let i=0; i<len; i++)
+    bytes[i] = binary.charCodeAt(i);
+  return bytes;
+};
+
+const digitally_sign = async(private_key, data) => {
+  console.log('digitally_sign', data);
+  const temp = await window.crypto.subtle.sign({name: 'ECDSA', hash: {name: 'SHA-384'}},
+                                               private_key, new TextEncoder().encode(JSON.stringify(data)));
+  const bytes = new Uint8Array(temp);
+  return encode_binary(bytes);
+};
+
+const check_signature = async(public_key, data, signature) => {
+  console.log('check_signature', data, signature);
+  const buffer = decode_binary(signature);
   return await window.crypto.subtle.verify({name: 'ECDSA', hash: {name: 'SHA-384'}},
                                            public_key, buffer, new TextEncoder().encode(JSON.stringify(data)));
+};
+
+const encrypt = async(symmetric_key, msg) => {
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const encoded = new TextEncoder().encode(msg);
+
+  const ciphertext = await window.crypto.subtle.encrypt(
+    {
+      name: "AES-GCM",
+      iv,
+    },
+    symmetric_key,
+    encoded,
+  );
+
+  const iv_ciphertext = new Uint8Array(12 + ciphertext.byteLength);
+  iv_ciphertext.set(iv, 0);
+  iv_ciphertext.set(new Uint8Array(ciphertext), 12);
+
+  return encode_binary(iv_ciphertext);
+};
+
+const decrypt = async(symmetric_key, cipher) => {
+  const arraybuffer = decode_binary(cipher);
+  let decrypted = await window.crypto.subtle.decrypt(
+    {
+      name: "AES-GCM",
+      iv: arraybuffer.slice(0, 12),
+    },
+    symmetric_key,
+    arraybuffer.slice(12),
+  );
+  return new TextDecoder().decode(decrypted);
 };
 
 const main = async() => {
@@ -190,13 +236,29 @@ const main = async() => {
 
   const temp_keys = await window.crypto.subtle.generateKey({name: "ECDH", namedCurve: "P-384"}, false, ['deriveKey']);
 
+  let symmetric_key = undefined;
+
   sock.on('interlocutor says', async(message) => {
+   try {
     if(message.type === 'set public key') {
       const {data, signature} = message;
-      console.log('signature valid?', await check_signature(partner_key, data, signature));
+      const verdict = await check_signature(partner_key, data, signature);
+      if(verdict) {
+        const imported_key = await window.crypto.subtle.importKey('jwk', JSON.parse(data.public_key),
+                                                                  {name: "ECDH", namedCurve: "P-384"}, false, []);
+        symmetric_key = await window.crypto.subtle.deriveKey({name: 'ECDH', public: imported_key}, temp_keys.privateKey,
+                                                             {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']);
+        await sleep(1000);
+        sock.emit('interlocutor should hear', {type: 'encrypted', ciphertext: await encrypt(symmetric_key, 'foo ' + Math.random())});
+      }
+    } else if(message.type === 'encrypted') {
+      console.log(await decrypt(symmetric_key, message.ciphertext));
     } else {
       // Do nothing
     }
+   } catch(e) {
+     console.error(e);
+   }
   });
 
   sock.emit('desired interlocutor is', await export_public_key(partner_key));
@@ -206,7 +268,7 @@ const main = async() => {
   await interlocutor_available_promise;
 
   const data = {public_key: await export_public_key(temp_keys.publicKey), timestamp: Date.now()};
-  sock.emit('interlocutor should hear', {type: 'set public key', data, signature: digitally_sign(master_private_key, data)});
+  sock.emit('interlocutor should hear', {type: 'set public key', data, signature: await digitally_sign(master_private_key, data)});
 
   ui.main_page_body.innerText = 'reached the end of the program';
 };
