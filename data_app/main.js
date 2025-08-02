@@ -273,7 +273,7 @@ const main = async() => {
     sock.emit('interlocutor should hear', {type: 'set public key', data, signature: await digitally_sign(master_private_key, data)});
   }
 
-  const device_id = await (async() => {
+  const self_device_id = await (async() => {
     const mk = await export_public_key(master_public_key);
     const pk = await export_public_key(partner_key);
 
@@ -286,19 +286,42 @@ const main = async() => {
       return 1;
     }
   })();
-  console.log({device_id});
+  console.log({self_device_id});
 
-  let data = {current: [], history: [], next_id: 0};
-  const process_change = ({prev_value, removed, inserted, index, new_value}) => {
-    data.history.push({removed, inserted, id_to_left: data.current[index].id});
-    const new_elements = [...inserted].map((c) => {
-      return {
-        id: 2*(data.next_id++) + device_id,
-        c,
-      };
-    });
+  let ephemeral_data = {timestamp: Date.now(), device_id: 0, next_ids: [2, 1], tombstones: {}};
+  let data = {current: [], history: [{type: 'timestamp', value: Date.now()}]};
+  const process_change = ({prev_value, removed, inserted, index, new_value, device_id}) => {
+    const now = Date.now();
+    const maybe_mergeable = ((ephemeral_data.timestamp > now - 5000) && (ephemeral_data.device_id !== device_id));
+    const id_to_left = ((index === 0) ? 0 : data.current[index-1].id);
+    const id_to_right = ((index+removed.length === prev_value.length) ? 0 : data.current[index+removed.length].id);
+    const recent = data.history.slice(-1)[0];
+    if(maybe_mergeable  &&  recent.type === 'remove'  &&  id_to_right === recent.id_to_right) {
+      recent.text = removed + recent.text;
+      data.history.push({type: 'add', text: inserted, id_to_left});
+    } else if(maybe_mergeable  &&  recent.type === 'add'  &&  id_to_left === recent.id_to_left) {
+      recent.text += inserted;
+      const id_2 = ((inserted.length === 0) ? id_to_right : ephemeral_data.next_ids[device_id]);
+      data.history.push({type: 'remove', text: removed, id_to_right: id_2});
+    } else {
+      if(ephemeral_data.timestamp <= now - 5000) {
+        data.history.push({type: 'timestamp', value: now});
+        ephemeral_data.timestamp = now;
+      }
+      if(ephemeral_data.device_id !== device_id) {
+        data.history.push({type: 'device_id', value: device_id});
+        ephemeral_data.device_id = device_id;
+      }
+      if(removed.length > 0)
+        data.history.push({type: 'remove', text: removed, id_to_right});
+      if(inserted.length > 0)
+        data.history.push({type: 'add', text: inserted, id_to_left});
+    }
+    for(let i=index; i<index+removed.length; ++i)
+      ephemeral_data.tombstones[data.current[i].id] = id_to_left;
+    const new_elements = [...inserted].map((c) => ({id: (ephemeral_data.next_ids[device_id] += 2), c}));
     data.current.splice(index, removed.length, ...new_elements);
-    console.log(JSON.parse(JSON.stringify({data})));
+    console.log(JSON.parse(JSON.stringify({data, ephemeral_data})));
   };
 
   const textarea = document.createElement('textarea');
@@ -306,9 +329,17 @@ const main = async() => {
   let start;
   let end;
   textarea.addEventListener('beforeinput', (ev) => {
-    //console.log({ev, value: ev.target.value, target_ranges: ev.getTargetRanges(), selection_start: ev.target.selectionStart});
-    start = textarea.selectionStart;
-    end = textarea.selectionEnd;
+    console.log({ev, value: ev.target.value, target_ranges: ev.getTargetRanges(), selection_start: ev.target.selectionStart, inputType: ev.inputType});
+    if(ev.inputType === 'deleteContentBackward'  &&  textarea.selectionStart === textarea.selectionEnd) {
+      start = Math.max(0, textarea.selectionStart - 1);
+      end = textarea.selectionStart;
+    } else if(ev.inputType === 'deleteContentForward'  &&  textarea.selectionStart === textarea.selectionEnd) {
+      start = textarea.selectionStart;
+      end = Math.min(textarea.selectionStart + 1, textarea.value.length);
+    } else {
+      start = textarea.selectionStart;
+      end = textarea.selectionEnd;
+    }
   });
   textarea.addEventListener('input', (e) => {
     const new_value = textarea.value;
@@ -318,7 +349,7 @@ const main = async() => {
     if(expected_new_value !== new_value)
       throw (console.error({prev_value, start, end, removed, inserted, expected_new_value, new_value}), 1234);
     //console.log({removed, inserted, at: start});
-    process_change({prev_value, removed, inserted, index: start, new_value});
+    process_change({prev_value, removed, inserted, index: start, new_value, device_id: self_device_id});
     prev_value = new_value;
   });
 
