@@ -292,17 +292,19 @@ const main = async() => {
   let data = {current: [], history: [{type: 'timestamp', value: Date.now()}]};
   const process_change = ({prev_value, removed, inserted, index, new_value, device_id}) => {
     const now = Date.now();
-    const maybe_mergeable = ((ephemeral_data.timestamp > now - 5000) && (ephemeral_data.device_id !== device_id));
+    const maybe_mergeable = ((ephemeral_data.timestamp > now - 5000) && (ephemeral_data.device_id === device_id));
     const id_to_left = ((index === 0) ? 0 : data.current[index-1].id);
     const id_to_right = ((index+removed.length === prev_value.length) ? 0 : data.current[index+removed.length].id);
     const recent = data.history.slice(-1)[0];
     if(maybe_mergeable  &&  recent.type === 'remove'  &&  id_to_right === recent.id_to_right) {
       recent.text = removed + recent.text;
-      data.history.push({type: 'add', text: inserted, id_to_left});
-    } else if(maybe_mergeable  &&  recent.type === 'add'  &&  id_to_left === recent.id_to_left) {
+      if(inserted.length > 0)
+        data.history.push({type: 'add', text: inserted, id_to_left});
+    } else if(maybe_mergeable  &&  recent.type === 'add'  &&  id_to_left === ephemeral_data.next_ids[device_id] - 2) {
       recent.text += inserted;
       const id_2 = ((inserted.length === 0) ? id_to_right : ephemeral_data.next_ids[device_id]);
-      data.history.push({type: 'remove', text: removed, id_to_right: id_2});
+      if(removed.length > 0)
+        data.history.push({type: 'remove', text: removed, id_to_right: id_2});
     } else {
       if(ephemeral_data.timestamp <= now - 5000) {
         data.history.push({type: 'timestamp', value: now});
@@ -319,7 +321,7 @@ const main = async() => {
     }
     for(let i=index; i<index+removed.length; ++i)
       ephemeral_data.tombstones[data.current[i].id] = id_to_left;
-    const new_elements = [...inserted].map((c) => ({id: (ephemeral_data.next_ids[device_id] += 2), c}));
+    const new_elements = [...inserted].map((c) => ({id: ((ephemeral_data.next_ids[device_id] += 2) - 2), c}));
     data.current.splice(index, removed.length, ...new_elements);
     console.log(JSON.parse(JSON.stringify({data, ephemeral_data})));
   };
