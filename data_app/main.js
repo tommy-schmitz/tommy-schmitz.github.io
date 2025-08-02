@@ -304,8 +304,16 @@ const main = async() => {
         state.splice(pos, 0, ...chars);
       }
       if (op.type === 'remove') {
-        const idx = state.findIndex(c => c.id === op.id_to_right);
-        if (idx > 0) state.splice(idx - op.text.length, op.text.length);
+        if(op.id_to_right === 0) {
+          state.splice(state.length - op.text.length, op.text.length);
+        } else {
+          const idx = state.findIndex(c => c.id === op.id_to_right);
+          if(idx > 0) {
+            state.splice(idx - op.text.length, op.text.length);
+          } else {
+            throw 1236;
+          }
+        }
       }
     }
     return state;
@@ -325,9 +333,8 @@ const main = async() => {
         data.history.push({type: 'add', text: inserted, id_to_left});
     } else if(maybe_mergeable  &&  recent.type === 'add'  &&  id_to_left === ephemeral_data.next_ids[device_id] - 2) {
       recent.text += inserted;
-      const id_2 = ((inserted.length === 0) ? id_to_right : ephemeral_data.next_ids[device_id]);
       if(removed.length > 0)
-        data.history.push({type: 'remove', text: removed, id_to_right: id_2});
+        data.history.push({type: 'remove', text: removed, id_to_right});
     } else {
       if(ephemeral_data.timestamp <= now - 5000) {
         data.history.push({type: 'timestamp', value: now});
