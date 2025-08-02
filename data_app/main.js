@@ -288,6 +288,29 @@ const main = async() => {
   })();
   console.log({self_device_id});
 
+  function replay(history) {
+    let state = [];
+    let device_id = 0;
+    let next_ids = [2, 1];
+    for (let op of history) {
+      if (op.type === 'device_id') device_id = op.value;
+      if (op.type === 'add') {
+        const idx = state.findIndex(c => c.id === op.id_to_left);
+        const pos = idx === -1 ? 0 : idx + 1;
+        const chars = [...op.text].map((c, i) => ({
+          id: (next_ids[device_id] += 2) - 2,
+          c
+        }));
+        state.splice(pos, 0, ...chars);
+      }
+      if (op.type === 'remove') {
+        const idx = state.findIndex(c => c.id === op.id_to_right);
+        if (idx > 0) state.splice(idx - op.text.length, op.text.length);
+      }
+    }
+    return state;
+  }
+
   let ephemeral_data = {timestamp: Date.now(), device_id: 0, next_ids: [2, 1], tombstones: {}};
   let data = {current: [], history: [{type: 'timestamp', value: Date.now()}]};
   const process_change = ({prev_value, removed, inserted, index, new_value, device_id}) => {
@@ -324,6 +347,9 @@ const main = async() => {
     const new_elements = [...inserted].map((c) => ({id: ((ephemeral_data.next_ids[device_id] += 2) - 2), c}));
     data.current.splice(index, removed.length, ...new_elements);
     console.log(JSON.parse(JSON.stringify({data, ephemeral_data})));
+    const replayed = replay(data.history);
+    if(JSON.stringify(replayed) !== JSON.stringify(data.current))
+      throw (console.error({data, replayed}), 1235);
   };
 
   const textarea = document.createElement('textarea');
