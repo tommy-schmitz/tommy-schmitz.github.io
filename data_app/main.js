@@ -1,3 +1,7 @@
+// Note to self: I don't like id_to_right for deletions.
+// It really needs to specify deletions by id of deleted character, not by id of nearby character.
+// It's also kinda sucky how many findIndex operations are required; maybe I need to use more of a linked list structure.
+
 //const initialize_simple_peer = async() => {
 //  console.log('initializing "simple-peer"');
 //
@@ -247,6 +251,9 @@ const history_since = (history, seen_id) => {
         result.push(item);
       result.push({type: 'remove', one_id: seen_id + 2, text: text.slice(0, (one_id - seen_id - 2) / 2), id_to_right});
     } else if(item.type === 'timestamp') {
+      // Do nothing
+    } else if(item.type === 'device_id') {
+      // Do nothing
     } else {
       throw 1239;
     }
@@ -298,7 +305,7 @@ const main = async() => {
           symmetric_key = await window.crypto.subtle.deriveKey({name: 'ECDH', public: imported_key}, temp_keys.privateKey,
                                                                {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']);
           await sleep(1000);
-          await send_encrypted_message({type: 'public key received'});
+          await send_encrypted_data({type: 'public key received'});
         } else {
           console.log('invalid signature');
         }
@@ -320,7 +327,7 @@ const main = async() => {
         } else if(parsed.type === 'ack') {
           const ack = parsed.value;
           to_be_sent.splice(0, to_be_sent.length, ...to_be_sent.filter((x) => (x.one_id > ack)));
-        } else if(parsed.type === 'received public key') {
+        } else if(parsed.type === 'public key received') {
           interlocutor_received_public_key.resolve();
         } else if(parsed.type === 'latest history') {
           interlocutor_latest_history.resolve(parsed.value);
