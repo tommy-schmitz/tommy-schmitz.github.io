@@ -262,7 +262,7 @@ const history_since = (history, seen_id) => {
   }
 };
 
-const get_encrypted_channel = ({ui, handle_decrypted_message: listener = null}) => {
+const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: listener = null, interlocutor_latest_history}) => {
   const sock = socket_io(RELAY_SERVER_URL);
   sock.on('disconnect', () => {
     console.log('Disconnected.');
@@ -286,14 +286,13 @@ const get_encrypted_channel = ({ui, handle_decrypted_message: listener = null}) 
   };
 
   const interlocutor_received_public_key = make_resolvable_promise();
-  const interlocutor_latest_history = make_resolvable_promise();
 
   const buffer = [];
   const handle_decrypted_message = async(message) => {
     if(listener === null) {
       buffer.push(message);
     } else {
-      await listener(message);
+      await listener({message});
     }
   };
 
@@ -346,10 +345,12 @@ const get_encrypted_channel = ({ui, handle_decrypted_message: listener = null}) 
   const set_decrypted_message_listener = async(f) => {
     listener = f;
     for(const message of buffer)
-      await listener(message);
+      await listener({message});
   };
 
-  return {send_encrypted_data, set_decrypted_message_listener};
+  const self_device_id = await get_self_device_id({master_public_key, partner_key});
+
+  return {send_encrypted_data, set_decrypted_message_listener, self_device_id};
 };
 
 const handle_network_operations = (() => {
@@ -377,7 +378,7 @@ const get_index_from_id = () => {
   throw 1238;
 };
 
-const get_self_device_id = async() => {
+const get_self_device_id = async({master_public_key, partner_key}) => {
   const mk = await export_public_key(master_public_key);
   const pk = await export_public_key(partner_key);
 
@@ -392,6 +393,7 @@ const get_self_device_id = async() => {
 };
 
 const replay = (history) => {
+  console.log({history});
   const state = {
     current: [],
     tombstones: {},
@@ -418,6 +420,8 @@ const replay = (history) => {
         tombstones[state[index+i].id] = {id_to_left, deletion_id: one_id + 2*(text.length-1-i)};
       state.splice(index, text.length);
     } else if(op.type === 'timestamp') {
+      // Do nothing
+    } else if(op.type === 'device_id') {
       // Do nothing
     } else {
       throw 1237;
@@ -498,7 +502,7 @@ const get_latest_id = ({history, self_device_id}) => {
   }
 };
 
-const compute_initial_text = async({send_encrypted_data}) => {
+const compute_initial_text = async({send_encrypted_data, self_device_id, interlocutor_latest_history}) => {
   const stored = localStorage.getItem('main_text_box_history');
   if(stored === null) {
     return '';
@@ -523,8 +527,12 @@ const main = async() => {
 
   const ui = await initialize_ui();
 
-  const {send_encrypted_data} = await get_encrypted_channel({
+  const interlocutor_latest_history = make_resolvable_promise();
+
+  const {send_encrypted_data, self_device_id} = await get_encrypted_channel({
     ui,
+    socket_io,
+    interlocutor_latest_history,
     handle_decrypted_message: ({message: parsed}) => {
       if(parsed.type === 'changes') {
         handle_network_operation({changes: parsed.value, send_encrypted_data, textarea, main_data});
@@ -538,7 +546,6 @@ const main = async() => {
     },
   });
 
-  const self_device_id = await get_self_device_id();
   console.log({self_device_id});
 
   const to_be_sent = [];
@@ -553,7 +560,7 @@ const main = async() => {
   let ephemeral_data = {timestamp: Date.now(), tombstones: {}, device_id: 0, clock: 0};
   let main_data = {current: [], history: [{type: 'timestamp', value: Date.now()}]};
 
-  const initial_text = await compute_initial_text({send_encrypted_data});
+  const initial_text = await compute_initial_text({send_encrypted_data, self_device_id, interlocutor_latest_history});
 
   const {textarea, set_value: set_textarea_value} = make_textarea(({prev_value, removed, inserted, index, new_value}) => {
     const normalized = normalize_change(change);
