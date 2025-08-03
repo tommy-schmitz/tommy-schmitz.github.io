@@ -266,15 +266,21 @@ const main = async() => {
       } else if(message.type === 'encrypted') {
         const plaintext = await decrypt(symmetric_key, message.ciphertext);
         const parsed = JSON.parse(plaintext);
+        console.log({parsed});
         if(parsed.type === 'changes') {
           let seen_index = parsed.value.length - 1;
           for(; seen_index>=0; --seen_index)
             if(JSON.stringify(parsed.value[seen_index]) === JSON.stringify(latest_ack))
               break;
+          const id_left_of_selection_start = ((textarea.selectionStart === 0) ? 0 : data.current[textarea.selectionStart].id);
+          const id_left_of_selection_end   = ((textarea.selectionEnd   === 0) ? 0 : data.current[textarea.selectionStart].id);
           for(const change of parsed.value.slice(seen_index + 1))
-            process_change({...parsed.change, device_id: 1-self_device_id});
+            process_change({...change, device_id: 1-self_device_id});
           latest_ack = parsed.value.slice(-1)[0];
-          await send_encrypted_data({type: 'ack', value: latest_ack});
+          send_encrypted_data({type: 'ack', value: latest_ack});  // asynchronous action
+          textarea.value = data.current.map(({c}) => (c)).join('');
+          textarea.selectionStart = ((ephemeral_data.tombstones[id_left_of_selection_start] !== undefined) ? ephemeral_data.tombstones[id_left_of_selection_start] : data.current.findIndex((c) => (c.id === id_left_of_selection_start)) + 1);
+          textarea.selectionEnd = ((ephemeral_data.tombstones[id_left_of_selection_end] !== undefined) ? ephemeral_data.tombstones[id_left_of_selection_end] : data.current.findIndex((c) => (c.id === id_left_of_selection_end)) + 1);
         } else if(parsed.type === 'ack') {
           const ack = parsed.value;
           let acked_index = to_be_sent.length - 1;
@@ -283,10 +289,10 @@ const main = async() => {
               break;
           to_be_sent.splice(0, acked_index + 1);
         } else {
-          console.warning('Unrecognized message type (2):', parsed.type);
+          console.warn('Unrecognized message type (2):', parsed.type);
         }
       } else {
-        console.warning('Unrecognized message type (1):', message.type);
+        console.warn('Unrecognized message type (1):', message.type);
       }
     } catch(e) {
       console.error(e);
@@ -366,20 +372,19 @@ const main = async() => {
   const to_be_sent = [];
   const normalize_change = (change) => {
     const {prev_value, removed, inserted, index, new_value, device_id} = change;
-    to_be_sent.push(change);
     const id_to_left = ((index === 0) ? 0 : data.current[index-1].id);
     const id_to_right = ((index+removed.length === prev_value.length) ? 0 : data.current[index+removed.length].id);
-
-    to_be_sent.push({
+    return {
       id_to_left,
       device_id,
       remove: data.current.slice(index, removed.length).map(({id}) => (id)),
       add: [...inserted].map((c, i) => ({id: ephemeral_data.next_ids[device_id] + 2*i, c})),
-    });
+    };
   };
   (async() => {
     while(true) {
-      await send_encrypted_data(to_be_sent);
+      if(to_be_sent.length > 0)
+        await send_encrypted_data({type: 'changes', value: to_be_sent});
       await sleep(1000);
     }
   })();
@@ -387,7 +392,7 @@ const main = async() => {
   let ephemeral_data = {timestamp: Date.now(), device_id: 0, next_ids: [2, 1], tombstones: {}};
   let data = {current: [], history: [{type: 'timestamp', value: Date.now()}]};
   const process_change = ({id_to_left, remove, add, device_id}) => {
-    const index = state.findIndex((c) => (c.id === op.id_to_right));
+    const index = data.current.findIndex((c) => (c.id === id_to_left)) + 1;
     const removed = data.current.slice(index, remove.length).map(({c}) => (c)).join('');
     const inserted = add.map(({c}) => (c)).join('');
     const now = Date.now();
@@ -476,7 +481,7 @@ const main = async() => {
 
     const change = {prev_value, removed, inserted, index: start, new_value, device_id: self_device_id};
     const normalized = normalize_change(change);
-    enqueue_change_to_send(normalized);
+    to_be_sent.push(normalized);
     process_change(normalized);
     prev_value = new_value;
   });
