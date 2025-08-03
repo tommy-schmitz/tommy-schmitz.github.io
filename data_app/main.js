@@ -34,6 +34,16 @@ const initialize_socket_io = async() => {
 
 const sleep = (millis) => (new Promise((resolve, reject) => (setTimeout(resolve, millis))));
 
+const make_resolvable_promise = () => {
+  let resolve = null;
+  let reject = null;
+  const promise = new Promise((resolve_, reject_) => {
+    resolve = resolve_;
+    reject = reject_;
+  });
+  return {promise, resolve, reject};
+};
+
 const initialize_ui = () => {
   document.body.innerHTML = '';
   document.body.style.fontFamily = 'sans-serif';
@@ -217,6 +227,32 @@ const decrypt = async(symmetric_key, cipher) => {
   return new TextDecoder().decode(decrypted);
 };
 
+const history_since = (history, seen_id) => {
+  const result = [];
+  for(const item of history) {
+    if(item.type === 'add') {
+      const {one_id, text, id_to_left} = item;
+      const max_id = one_id + 2 * (text.length - 1);
+      if(max_id <= seen_id)
+        continue;
+      if(one_id > seen_id)
+        result.push(item);
+      result.push({type: 'add', one_id: seen_id + 2, text: text.slice((seen_id + 2 - one_id) / 2), id_to_left: seen_id});
+    } else if(item.type === 'remove') {
+      const {one_id, text, id_to_right} = item;
+      const max_id = one_id + 2 * (text.length - 1);
+      if(max_id <= seen_id)
+        continue;
+      if(one_id > seen_id)
+        result.push(item);
+      result.push({type: 'remove', one_id: seen_id + 2, text: text.slice(0, (one_id - seen_id - 2) / 2), id_to_right});
+    } else if(item.type === 'timestamp') {
+    } else {
+      throw 1239;
+    }
+  }
+};
+
 const main = async() => {
   console.log('Version 2025-08-01 16:31');
   const socket_io = await initialize_socket_io();
@@ -246,7 +282,10 @@ const main = async() => {
     sock.emit('interlocutor should hear', {type: 'encrypted', ciphertext});
   };
 
-  let latest_ack = null;
+  let latest_ack = 0;
+
+  const interlocutor_received_public_key = make_resolvable_promise();
+  const interlocutor_latest_history = make_resolvable_promise();
 
   sock.on('interlocutor says', async(message) => {
     try {
@@ -259,7 +298,7 @@ const main = async() => {
           symmetric_key = await window.crypto.subtle.deriveKey({name: 'ECDH', public: imported_key}, temp_keys.privateKey,
                                                                {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']);
           await sleep(1000);
-          sock.emit('interlocutor should hear', {type: 'encrypted', ciphertext: await encrypt(symmetric_key, 'foo ' + Math.random())});
+          await send_encrypted_message({type: 'public key received'});
         } else {
           console.log('invalid signature');
         }
@@ -268,26 +307,23 @@ const main = async() => {
         const parsed = JSON.parse(plaintext);
         console.log({parsed});
         if(parsed.type === 'changes') {
-          let seen_index = parsed.value.length - 1;
-          for(; seen_index>=0; --seen_index)
-            if(JSON.stringify(parsed.value[seen_index]) === JSON.stringify(latest_ack))
-              break;
           const id_left_of_selection_start = ((textarea.selectionStart === 0) ? 0 : data.current[textarea.selectionStart].id);
           const id_left_of_selection_end   = ((textarea.selectionEnd   === 0) ? 0 : data.current[textarea.selectionStart].id);
-          for(const change of parsed.value.slice(seen_index + 1))
-            process_change({...change, device_id: 1-self_device_id});
-          latest_ack = parsed.value.slice(-1)[0];
+          for(const change of parsed.value.slice(seen_index + 1)) {
+            process_change({...change, id: (change.id & -2) + (1 - self_device_id)});
+            latest_ack = Math.max(latest_ack, change.id);
+          }
           send_encrypted_data({type: 'ack', value: latest_ack});  // asynchronous action
           textarea.value = data.current.map(({c}) => (c)).join('');
-          textarea.selectionStart = ((ephemeral_data.tombstones[id_left_of_selection_start] !== undefined) ? ephemeral_data.tombstones[id_left_of_selection_start] : data.current.findIndex((c) => (c.id === id_left_of_selection_start)) + 1);
-          textarea.selectionEnd = ((ephemeral_data.tombstones[id_left_of_selection_end] !== undefined) ? ephemeral_data.tombstones[id_left_of_selection_end] : data.current.findIndex((c) => (c.id === id_left_of_selection_end)) + 1);
+          textarea.selectionStart = get_index_from_id(id_left_of_selection_start);
+          textarea.selectionEnd = get_indeX_from_id(id_left_of_selection_end);
         } else if(parsed.type === 'ack') {
           const ack = parsed.value;
-          let acked_index = to_be_sent.length - 1;
-          for(; acked_index>=0; --acked_index)
-            if(JSON.stringify(to_be_sent[acked_index]) === JSON.stringify(ack))
-              break;
-          to_be_sent.splice(0, acked_index + 1);
+          to_be_sent.splice(0, to_be_sent.length, ...to_be_sent.filter((x) => (x.one_id > ack)));
+        } else if(parsed.type === 'received public key') {
+          interlocutor_received_public_key.resolve();
+        } else if(parsed.type === 'latest history') {
+          interlocutor_latest_history.resolve(parsed.value);
         } else {
           console.warn('Unrecognized message type (2):', parsed.type);
         }
@@ -311,6 +347,12 @@ const main = async() => {
     sock.emit('interlocutor should hear', {type: 'set public key', data, signature: await digitally_sign(master_private_key, data)});
   }
 
+  await interlocutor_received_public_key.promise;
+
+  const get_index_from_id = () => {
+    throw 1238;
+  };
+
   const self_device_id = await (async() => {
     const mk = await export_public_key(master_public_key);
     const pk = await export_public_key(partner_key);
@@ -326,59 +368,51 @@ const main = async() => {
   })();
   console.log({self_device_id});
 
-  function replay(history) {
-    const state = [];
-    let device_id = 0;
-    const next_ids = [2, 1];
-    const tombstones = {};
-    for(let op of history) {
-      if(op.type === 'device_id') {
-        device_id = op.value;
-      } else if(op.type === 'add') {
-        const idx = state.findIndex(c => c.id === op.id_to_left);
-        const pos = idx === -1 ? 0 : idx + 1;
-        const chars = [...op.text].map((c, i) => ({
-          id: (next_ids[device_id] += 2) - 2,
-          c
-        }));
-        state.splice(pos, 0, ...chars);
+  const replay = (history) => {
+    const state = {
+      current: [],
+      tombstones: {},
+      device_id: 0,
+      clock: 0,
+    };
+    for(const op of history) {
+      if(op.type === 'add') {
+        const {id_to_left, text, one_id} = op;
+        state.device_id = one_id % 2;
+        state.clock = Math.max(state.clock, one_id + 2*(text.length-1));
+        const index = state.current.findIndex(({id}) => (id === id_to_left)) + 1;
+        const new_elements = [...text].map((c, i) => ({id: (one_id + 2 * 2), c}));
+        state.splice(index, 0, ...new_elements);
       } else if (op.type === 'remove') {
-        if(op.id_to_right === 0) {
-          const idx = state.length - op.text.length;
-          const id_to_left = ((idx === 0) ? 0 : state[idx-1].id);
-          for(let i=idx; i<idx+op.text.length; ++i)
-            tombstones[state[i].id] = id_to_left;
-          state.splice(idx, op.text.length);
-        } else {
-          const idx = state.findIndex(c => c.id === op.id_to_right);
-          const id_to_left = ((idx === 0) ? 0 : state[idx-1].id);
-          for(let i=idx; i<idx+op.text.length; ++i)
-            tombstones[state[i].id] = id_to_left;
-          if(idx > 0) {
-            state.splice(idx - op.text.length, op.text.length);
-          } else {
-            throw 1236;
-          }
-        }
+        const {id_to_right, text, one_id} = op;
+        state.device_id = one_id % 2;
+        state.clock = Math.max(state.clock, one_id + 2*(text.length-1));
+        const index = ((id_to_right === 0) ? state.current.length : state.current.findIndex(({id}) => (id === id_to_right)) - text.length);
+        if(index < 0)
+          throw 1236;
+        const id_to_left = ((index === 0) ? 0 : state.current[index-1].id);
+        for(let i=0; i<op.text.length; ++i)
+          tombstones[state[index+i].id] = {id_to_left, deletion_id: one_id + 2*(text.length-1-i)};
+        state.splice(index, text.length);
       } else if(op.type === 'timestamp') {
         // Do nothing
       } else {
         throw 1237;
       }
     }
-    return {current: state, device_id, next_ids, tombstones};
-  }
+    return state;
+  };
 
   const to_be_sent = [];
   const normalize_change = (change) => {
-    const {prev_value, removed, inserted, index, new_value, device_id} = change;
+    const {prev_value, removed, inserted, index, new_value, clock} = change;
     const id_to_left = ((index === 0) ? 0 : data.current[index-1].id);
     const id_to_right = ((index+removed.length === prev_value.length) ? 0 : data.current[index+removed.length].id);
     return {
       id_to_left,
-      device_id,
       remove: data.current.slice(index, removed.length).map(({id}) => (id)),
-      add: [...inserted].map((c, i) => ({id: ephemeral_data.next_ids[device_id] + 2*i, c})),
+      add: [...inserted].map((c, i) => ({id: clock + 2*i, c})),
+      clock,
     };
   };
   (async() => {
@@ -389,41 +423,46 @@ const main = async() => {
     }
   })();
 
-  let ephemeral_data = {timestamp: Date.now(), device_id: 0, next_ids: [2, 1], tombstones: {}};
+  let ephemeral_data = {timestamp: Date.now(), tombstones: {}, device_id: 0, clock: 0};
   let data = {current: [], history: [{type: 'timestamp', value: Date.now()}]};
-  const process_change = ({id_to_left, remove, add, device_id}) => {
+  const process_change = ({id_to_left, remove, add, clock}) => {
     const index = data.current.findIndex((c) => (c.id === id_to_left)) + 1;
     const removed = data.current.slice(index, remove.length).map(({c}) => (c)).join('');
     const inserted = add.map(({c}) => (c)).join('');
     const now = Date.now();
-    const maybe_mergeable = ((ephemeral_data.timestamp > now - 5000) && (ephemeral_data.device_id === device_id));
-    const id_to_right = ((index+remove.length === data.current.length) ? 0 : data.current[index+remove.length].id);
+    const device_id = clock % 2;
     const recent = data.history.slice(-1)[0];
+    const maybe_mergeable = (
+          (ephemeral_data.timestamp > now - 5000)
+      &&  (ephemeral_data.device_id === device_id)
+      &&  (recent.one_id !== undefined)
+      &&  (clock === recent.one_id + 2 * recent.text.length)
+    );
+    const id_to_right = ((index+remove.length === data.current.length) ? 0 : data.current[index+remove.length].id);
     if(maybe_mergeable  &&  recent.type === 'remove'  &&  id_to_right === recent.id_to_right) {
       recent.text = removed + recent.text;
       if(inserted.length > 0)
-        data.history.push({type: 'add', text: inserted, id_to_left});
-    } else if(maybe_mergeable  &&  recent.type === 'add'  &&  id_to_left === ephemeral_data.next_ids[device_id] - 2) {
+        data.history.push({type: 'add', text: inserted, id_to_left, one_id: clock});
+    } else if(maybe_mergeable  &&  recent.type === 'add'  &&  id_to_left === clock - 2) {
       recent.text += inserted;
       if(removed.length > 0)
-        data.history.push({type: 'remove', text: removed, id_to_right});
+        data.history.push({type: 'remove', text: removed, id_to_right, one_id: clock});
     } else {
       if(ephemeral_data.timestamp <= now - 5000) {
         data.history.push({type: 'timestamp', value: now});
         ephemeral_data.timestamp = now;
       }
       if(ephemeral_data.device_id !== device_id) {
-        data.history.push({type: 'device_id', value: device_id});
         ephemeral_data.device_id = device_id;
       }
       if(removed.length > 0)
-        data.history.push({type: 'remove', text: removed, id_to_right});
+        data.history.push({type: 'remove', text: removed, id_to_right, clock});
       if(inserted.length > 0)
-        data.history.push({type: 'add', text: inserted, id_to_left});
+        data.history.push({type: 'add', text: inserted, id_to_left, clock});
     }
     for(let i=index; i<index+removed.length; ++i)
       ephemeral_data.tombstones[data.current[i].id] = id_to_left;
-    const new_elements = [...inserted].map((c) => ({id: ((ephemeral_data.next_ids[device_id] += 2) - 2), c}));
+    const new_elements = [...inserted].map((c, i) => ({id: clock + 2*i, c}));
     data.current.splice(index, removed.length, ...new_elements);
     console.log(JSON.parse(JSON.stringify({data, ephemeral_data})));
     const replayed = replay(data.history);
@@ -432,29 +471,22 @@ const main = async() => {
     localStorage.setItem('main_text_box_history', JSON.stringify(data.history));
   };
 
-  const send_change = async({prev_value, removed, inserted, index, new_value, device_id}) => {
-    
-    send_encrypted_data({type: 'change', more_stuff});
+  const get_latest_id = (history) => {
+    for(let i=history.length-1; i>=0; --i) {
+      const item = history[i];
+      if(item.type === 'add'  ||  item.type === 'remove') {
+        const device_id = item.one_id % 2;
+        if(device_id === self_device_id)
+          continue;
+        return item.one_id + 2 * (item.text.length - 1);
+      } else {
+        continue;
+      }
+    }
   };
 
   const textarea = document.createElement('textarea');
-  let prev_value = (() => {
-    const stored = localStorage.getItem('main_text_box_history');
-    if(stored === null) {
-      return '';
-    } else {
-      const stored_history = JSON.parse(stored);
-      const replayed = replay(stored_history);
-      data.history.splice(0, data.history.length, ...stored_history);
-      data.current.splice(0, data.current.length, ...replayed.current);
-      Object.assign(ephemeral_data.tombstones, replayed.tombstones);
-      ephemeral_data.timestamp = replayed.timestamp;
-      ephemeral_data.next_ids.splice(0, ephemeral_data.next_ids.length, ...replayed.next_ids);
-      ephemeral_data.device_id = replayed.device_id;
-      return data.current.map(({c}) => (c)).join('');
-    }
-  })();
-  textarea.value = prev_value;
+  let prev_value = '';
   let start;
   let end;
   textarea.addEventListener('beforeinput', (ev) => {
@@ -479,7 +511,15 @@ const main = async() => {
       throw (console.error({prev_value, start, end, removed, inserted, expected_new_value, new_value}), 1234);
     //console.log({removed, inserted, at: start});
 
-    const change = {prev_value, removed, inserted, index: start, new_value, device_id: self_device_id};
+    const change = {
+      prev_value,
+      removed,
+      inserted,
+      index: start,
+      new_value,
+      device_id: self_device_id,
+      clock: (ephemeral_data.clock & -2) + 2 + self_device_id,
+    };
     const normalized = normalize_change(change);
     to_be_sent.push(normalized);
     process_change(normalized);
@@ -487,6 +527,28 @@ const main = async() => {
   });
 
   ui.main_page_body.innerText = '';
+
+  prev_value = await (async() => {
+    const stored = localStorage.getItem('main_text_box_history');
+    if(stored === null) {
+      return '';
+    } else {
+      const stored_history = JSON.parse(stored);
+      send_encrypted_data({type: 'latest history', value: get_latest_id(stored_history)});  // asynchronous action
+      const other_latest_history_id = await interlocutor_latest_history.promise;
+      send_encrypted_data(history_since(stored_history, other_latest_history_id));  // asynchronous action
+      const replayed = replay(stored_history);
+      data.history.splice(0, data.history.length, ...stored_history);
+      data.current.splice(0, data.current.length, ...replayed.current);
+      Object.assign(ephemeral_data.tombstones, replayed.tombstones);
+      ephemeral_data.timestamp = replayed.timestamp;
+      ephemeral_data.clock = replayed.clock;
+      ephemeral_data.device_id = replayed.device_id;
+      return data.current.map(({c}) => (c)).join('');
+    }
+  })();
+  textarea.value = prev_value;
+
   ui.main_page_body.appendChild(textarea);
 };
 
