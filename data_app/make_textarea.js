@@ -24,6 +24,7 @@ const make_textarea = (callback) => {
     if(expected_new_value !== new_value)
       throw (console.error({prev_value, start, end, removed, inserted, expected_new_value, new_value}), 1234);
     callback({prev_value, removed, inserted, index: start, new_value});
+    prev_value = new_value;
   });
   const set_value = (new_value) => {
     prev_value = new_value;
