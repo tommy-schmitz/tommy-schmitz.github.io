@@ -315,7 +315,7 @@ const main = async() => {
         console.log({parsed});
         if(parsed.type === 'changes') {
           const id_left_of_selection_start = ((textarea.selectionStart === 0) ? 0 : data.current[textarea.selectionStart].id);
-          const id_left_of_selection_end   = ((textarea.selectionEnd   === 0) ? 0 : data.current[textarea.selectionEnd  ].id);
+          const id_left_of_selection_end   = ((textarea.selectionEnd   === 0) ? 0 : data.current[textarea.selectionStart].id);
           for(const change of parsed.value.slice(seen_index + 1)) {
             process_change({...change, id: (change.id & -2) + (1 - self_device_id)});
             latest_ack = Math.max(latest_ack, change.id);
@@ -323,7 +323,7 @@ const main = async() => {
           send_encrypted_data({type: 'ack', value: latest_ack});  // asynchronous action
           textarea.value = data.current.map(({c}) => (c)).join('');
           textarea.selectionStart = get_index_from_id(id_left_of_selection_start);
-          textarea.selectionEnd = get_index_from_id(id_left_of_selection_end);
+          textarea.selectionEnd = get_indeX_from_id(id_left_of_selection_end);
         } else if(parsed.type === 'ack') {
           const ack = parsed.value;
           to_be_sent.splice(0, to_be_sent.length, ...to_be_sent.filter((x) => (x.one_id > ack)));
@@ -375,38 +375,56 @@ const main = async() => {
   })();
   console.log({self_device_id});
 
+  const execute_op = (state) => {
+    if(op.type === 'add') {
+      const {id_to_left, text, one_id} = op;
+      state.device_id = one_id % 2;
+      state.clock = Math.max(state.clock, one_id + 2*(text.length-1));
+      let lefty = state.active_list[id_to_left];
+      [...text].forEach((c, i) => {
+        const id = one_id + 2 * i;
+        const new_element = {id, c, prev: lefty, next: lefty.next};
+        state.active_list[id] = new_element;
+        lefty.next.prev = new_element;
+        left.next = new_element;
+        lefty = new_element;
+      });
+    } else if (op.type === 'remove') {
+      const {deletion_list, one_id} = op;
+      state.device_id = one_id % 2;
+      state.clock = Math.max(state.clock, one_id + 2*(deletion_list.length-1));
+      deletion_list.forEach(({id, c}, i) => {
+        const moribund = state.active_list[id];
+        if(moribund.c !== c)
+          throw 1240;
+        moribund.prev.next = moribund.next;
+        moribund.next.prev = moribund.prev;
+        const sigil = state.tombstone_list[0];
+        const tombstone = {deletion_id: one_id + 2 * i, id_to_left: moribund.prev.id, prev: sigil.prev, next: sigil};
+        state.tombstone_list[id] = tombstone;
+        sigil.prev.next = tombstone;
+        sigil.prev = tombstone;
+        delete state.active_list[id];
+      });
+    } else if(op.type === 'timestamp') {
+      // Do nothing
+    } else if(op.type === 'device_id') {
+      // Do nothing
+    } else {
+      throw 1237;
+    }
+  };
+
   const replay = (history) => {
     const state = {
       current: [],
-      tombstones: {},
+      active_list: {0: (() => {const result = {}; return Object.assign(result, {type: 'sigil', next: result, prev: result});})()},
+      tombstone_list: {0: (() => {const result = {}; return Object.assign(result, {type: 'sigil', next: result, prev: result});})()},
       device_id: 0,
       clock: 0,
     };
-    for(const op of history) {
-      if(op.type === 'add') {
-        const {id_to_left, text, one_id} = op;
-        state.device_id = one_id % 2;
-        state.clock = Math.max(state.clock, one_id + 2*(text.length-1));
-        const index = state.current.findIndex(({id}) => (id === id_to_left)) + 1;
-        const new_elements = [...text].map((c, i) => ({id: (one_id + 2 * 2), c}));
-        state.splice(index, 0, ...new_elements);
-      } else if (op.type === 'remove') {
-        const {id_to_right, text, one_id} = op;
-        state.device_id = one_id % 2;
-        state.clock = Math.max(state.clock, one_id + 2*(text.length-1));
-        const index = ((id_to_right === 0) ? state.current.length : state.current.findIndex(({id}) => (id === id_to_right)) - text.length);
-        if(index < 0)
-          throw 1236;
-        const id_to_left = ((index === 0) ? 0 : state.current[index-1].id);
-        for(let i=0; i<op.text.length; ++i)
-          tombstones[state[index+i].id] = {id_to_left, deletion_id: one_id + 2*(text.length-1-i)};
-        state.splice(index, text.length);
-      } else if(op.type === 'timestamp') {
-        // Do nothing
-      } else {
-        throw 1237;
-      }
-    }
+    for(const op of history)
+      execute_op(state, op);
     return state;
   };
 
@@ -492,13 +510,50 @@ const main = async() => {
     }
   };
 
-  const {textarea, set_value: set_textarea_value} = make_textarea(({prev_value, removed, inserted, index: start, new_value}) => {
-    
+  const textarea = document.createElement('textarea');
+  let prev_value = '';
+  let start;
+  let end;
+  textarea.addEventListener('beforeinput', (ev) => {
+    console.log({ev, value: ev.target.value, target_ranges: ev.getTargetRanges(), selection_start: ev.target.selectionStart, inputType: ev.inputType});
+    if(ev.inputType === 'deleteContentBackward'  &&  textarea.selectionStart === textarea.selectionEnd) {
+      start = Math.max(0, textarea.selectionStart - 1);
+      end = textarea.selectionStart;
+    } else if(ev.inputType === 'deleteContentForward'  &&  textarea.selectionStart === textarea.selectionEnd) {
+      start = textarea.selectionStart;
+      end = Math.min(textarea.selectionStart + 1, textarea.value.length);
+    } else {
+      start = textarea.selectionStart;
+      end = textarea.selectionEnd;
+    }
+  });
+  textarea.addEventListener('input', (e) => {
+    const new_value = textarea.value;
+    const removed = prev_value.slice(start, end);
+    const inserted = new_value.slice(start, start + (new_value.length - prev_value.length + removed.length));
+    const expected_new_value = prev_value.slice(0, start) + inserted + prev_value.slice(end);
+    if(expected_new_value !== new_value)
+      throw (console.error({prev_value, start, end, removed, inserted, expected_new_value, new_value}), 1234);
+    //console.log({removed, inserted, at: start});
+
+    const change = {
+      prev_value,
+      removed,
+      inserted,
+      index: start,
+      new_value,
+      device_id: self_device_id,
+      clock: (ephemeral_data.clock & -2) + 2 + self_device_id,
+    };
+    const normalized = normalize_change(change);
+    to_be_sent.push(normalized);
+    process_change(normalized);
+    prev_value = new_value;
   });
 
   ui.main_page_body.innerText = '';
 
-  set_textarea_value(await (async() => {
+  prev_value = await (async() => {
     const stored = localStorage.getItem('main_text_box_history');
     if(stored === null) {
       return '';
@@ -516,7 +571,8 @@ const main = async() => {
       ephemeral_data.device_id = replayed.device_id;
       return data.current.map(({c}) => (c)).join('');
     }
-  })());
+  })();
+  textarea.value = prev_value;
 
   ui.main_page_body.appendChild(textarea);
 };
