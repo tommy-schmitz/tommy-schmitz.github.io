@@ -46,7 +46,9 @@ const initialize_ui = () => {
 };
 
 const RELAY_SERVER_URL = (() => {
-//  if(window.location.hostname === 'localhost') {
+//  if(window.location.href.startsWith('file:///')) {
+//    return 'http://localhost:6003';
+//  } else if(window.location.hostname === 'localhost') {
 //    return 'http://localhost:6003';
 //  } else {
     return 'https://relay-server-13u9.onrender.com';
@@ -238,29 +240,57 @@ const main = async() => {
 
   let symmetric_key = undefined;
 
+  const send_encrypted_data = async(data) => {
+    const plaintext = JSON.stringify(data);
+    const ciphertext = await encrypt(symmetric_key, plaintext);
+    sock.emit('interlocutor should hear', {type: 'encrypted', ciphertext});
+  };
+
+  let latest_ack = null;
+
   sock.on('interlocutor says', async(message) => {
-   try {
-    if(message.type === 'set public key') {
-      const {data, signature} = message;
-      const verdict = await check_signature(partner_key, data, signature);
-      if(verdict) {
-        const imported_key = await window.crypto.subtle.importKey('jwk', JSON.parse(data.public_key),
-                                                                  {name: "ECDH", namedCurve: "P-384"}, false, []);
-        symmetric_key = await window.crypto.subtle.deriveKey({name: 'ECDH', public: imported_key}, temp_keys.privateKey,
-                                                             {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']);
-        await sleep(1000);
-        sock.emit('interlocutor should hear', {type: 'encrypted', ciphertext: await encrypt(symmetric_key, 'foo ' + Math.random())});
+    try {
+      if(message.type === 'set public key') {
+        const {data, signature} = message;
+        const verdict = await check_signature(partner_key, data, signature);
+        if(verdict) {
+          const imported_key = await window.crypto.subtle.importKey('jwk', JSON.parse(data.public_key),
+                                                                    {name: "ECDH", namedCurve: "P-384"}, false, []);
+          symmetric_key = await window.crypto.subtle.deriveKey({name: 'ECDH', public: imported_key}, temp_keys.privateKey,
+                                                               {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']);
+          await sleep(1000);
+          sock.emit('interlocutor should hear', {type: 'encrypted', ciphertext: await encrypt(symmetric_key, 'foo ' + Math.random())});
+        } else {
+          console.log('invalid signature');
+        }
+      } else if(message.type === 'encrypted') {
+        const plaintext = await decrypt(symmetric_key, message.ciphertext);
+        const parsed = JSON.parse(plaintext);
+        if(parsed.type === 'changes') {
+          let seen_index = parsed.value.length - 1;
+          for(; seen_index>=0; --seen_index)
+            if(JSON.stringify(parsed.value[seen_index]) === JSON.stringify(latest_ack))
+              break;
+          for(const change of parsed.value.slice(seen_index + 1))
+            process_change({...parsed.change, device_id: 1-self_device_id});
+          latest_ack = parsed.value.slice(-1)[0];
+          await send_encrypted_data({type: 'ack', value: latest_ack});
+        } else if(parsed.type === 'ack') {
+          const ack = parsed.value;
+          let acked_index = to_be_sent.length - 1;
+          for(; acked_index>=0; --acked_index)
+            if(JSON.stringify(to_be_sent[acked_index]) === JSON.stringify(ack))
+              break;
+          to_be_sent.splice(0, acked_index + 1);
+        } else {
+          console.warning('Unrecognized message type (2):', parsed.type);
+        }
       } else {
-        console.log('invalid signature');
+        console.warning('Unrecognized message type (1):', message.type);
       }
-    } else if(message.type === 'encrypted') {
-      console.log(await decrypt(symmetric_key, message.ciphertext));
-    } else {
-      // Do nothing
+    } catch(e) {
+      console.error(e);
     }
-   } catch(e) {
-     console.error(e);
-   }
   });
 
   sock.emit('desired interlocutor is', await export_public_key(partner_key));
@@ -333,13 +363,36 @@ const main = async() => {
     return {current: state, device_id, next_ids, tombstones};
   }
 
-  let ephemeral_data = {timestamp: Date.now(), device_id: 0, next_ids: [2, 1], tombstones: {}};
-  let data = {current: [], history: [{type: 'timestamp', value: Date.now()}]};
-  const process_change = ({prev_value, removed, inserted, index, new_value, device_id}) => {
-    const now = Date.now();
-    const maybe_mergeable = ((ephemeral_data.timestamp > now - 5000) && (ephemeral_data.device_id === device_id));
+  const to_be_sent = [];
+  const normalize_change = (change) => {
+    const {prev_value, removed, inserted, index, new_value, device_id} = change;
+    to_be_sent.push(change);
     const id_to_left = ((index === 0) ? 0 : data.current[index-1].id);
     const id_to_right = ((index+removed.length === prev_value.length) ? 0 : data.current[index+removed.length].id);
+
+    to_be_sent.push({
+      id_to_left,
+      device_id,
+      remove: data.current.slice(index, removed.length).map(({id}) => (id)),
+      add: [...inserted].map((c, i) => ({id: ephemeral_data.next_ids[device_id] + 2*i, c})),
+    });
+  };
+  (async() => {
+    while(true) {
+      await send_encrypted_data(to_be_sent);
+      await sleep(1000);
+    }
+  })();
+
+  let ephemeral_data = {timestamp: Date.now(), device_id: 0, next_ids: [2, 1], tombstones: {}};
+  let data = {current: [], history: [{type: 'timestamp', value: Date.now()}]};
+  const process_change = ({id_to_left, remove, add, device_id}) => {
+    const index = state.findIndex((c) => (c.id === op.id_to_right));
+    const removed = data.current.slice(index, remove.length).map(({c}) => (c)).join('');
+    const inserted = add.map(({c}) => (c)).join('');
+    const now = Date.now();
+    const maybe_mergeable = ((ephemeral_data.timestamp > now - 5000) && (ephemeral_data.device_id === device_id));
+    const id_to_right = ((index+remove.length === data.current.length) ? 0 : data.current[index+remove.length].id);
     const recent = data.history.slice(-1)[0];
     if(maybe_mergeable  &&  recent.type === 'remove'  &&  id_to_right === recent.id_to_right) {
       recent.text = removed + recent.text;
@@ -372,6 +425,11 @@ const main = async() => {
     if(JSON.stringify(replayed.current) !== JSON.stringify(data.current))
       throw (console.error({data, replayed}), 1235);
     localStorage.setItem('main_text_box_history', JSON.stringify(data.history));
+  };
+
+  const send_change = async({prev_value, removed, inserted, index, new_value, device_id}) => {
+    
+    send_encrypted_data({type: 'change', more_stuff});
   };
 
   const textarea = document.createElement('textarea');
@@ -415,7 +473,11 @@ const main = async() => {
     if(expected_new_value !== new_value)
       throw (console.error({prev_value, start, end, removed, inserted, expected_new_value, new_value}), 1234);
     //console.log({removed, inserted, at: start});
-    process_change({prev_value, removed, inserted, index: start, new_value, device_id: self_device_id});
+
+    const change = {prev_value, removed, inserted, index: start, new_value, device_id: self_device_id};
+    const normalized = normalize_change(change);
+    enqueue_change_to_send(normalized);
+    process_change(normalized);
     prev_value = new_value;
   });
 
