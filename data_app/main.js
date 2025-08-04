@@ -48,6 +48,67 @@ const make_resolvable_promise = () => {
   return {promise, resolve, reject};
 };
 
+// This function make_stable_string() is (decently well) optimized for performance. Instead of readability.
+export const make_stable_string = (json_value) => {
+  let indent_level = 0;
+  const state = ['done', json_value, 'json'];
+  const reverser = [];
+  let result = '';
+  for(;;) {
+    const top = state.pop();
+    if(top === 'json') {
+      const top2 = state.pop();
+      if(Array.isArray(top2)) {
+        state.push(']', 'text', 'indent', 'decrement indent level');
+        for(let i=0; i<top2.length; ++i) {
+          const v2 = top2[top2.length - 1 - i];
+          if(i > 0)
+            state.push(',\n');
+          else
+            state.push('\n');
+          state.push('text', v2, 'json', 'indent');
+        }
+        state.push('[\n', 'text', 'increment indent level');
+      } else if(top2 === null) {
+        result += 'null';
+      } else if(typeof top2 === 'object') {
+        state.push('}', 'text', 'indent', 'decrement indent level');
+        for(const key in top2)
+          reverser.push(key);
+        const original_length = reverser.length;
+        while(reverser.length > 0) {
+          const key = reverser.pop()!;
+          const v2 = (top2)[key];
+          if(reverser.length === original_length-1)
+            state.push('\n');
+          else
+            state.push(',\n');
+          state.push('text', v2, 'json', `${JSON.stringify(key)}: `, 'text', 'indent');
+        }
+        state.push('{\n', 'text', 'increment indent level');
+      } else {
+        result += JSON.stringify(top2);
+      }
+    } else if(top === 'text') {
+      result += state.pop();
+    } else if(top === 'decrement indent level') {
+      --indent_level;
+    } else if(top === 'indent') {
+      for(let i=0; i<indent_level; ++i)
+        result += '  ';
+    } else if(top === 'increment indent level') {
+      ++indent_level;
+    } else if(top === 'done') {
+      break;
+    } else {
+      const unreachable = top;
+      console.log(top);
+      throw new Error('assertion failed');
+    }
+  }
+  return result;
+};
+
 const initialize_ui = async() => {
   await page_load_promise;
 
@@ -474,7 +535,7 @@ const replay = (history) => {
     timestamp: 0,
   };
   for(const op of history) {
-    execute_operation({state_1, state_2, op});
+    execute_operation({state_1, state_2, operation: op});
   }
   return {state_1, state_2};
 };
@@ -637,7 +698,13 @@ const generate_network_operations = ({normalizeds, main_data}) => {
 //};
 
 const process_change = ({ephemeral_data, main_data, operation}) => {
+  console.log('process_change', operation);
   execute_operation({state_1: main_data, state_2: ephemeral_data, operation});
+  main_data.history.push(operation);
+  const replayed = replay(main_data.history);
+  if(make_stable_string(replayed) !== make_stable_string({state_1: {current: main_data.current}, state_2: ephemeral_data}))
+    throw (console.error({real: {main_data, ephemeral_data}, replayed}), 1235);
+  localStorage.setItem('main_text_box_history', JSON.stringify(main_data.history));
 };
 
 const get_latest_id = ({history, self_device_id}) => {
