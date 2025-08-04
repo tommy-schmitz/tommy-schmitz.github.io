@@ -49,7 +49,7 @@ const make_resolvable_promise = () => {
 };
 
 // This function make_stable_string() is (decently well) optimized for performance. Instead of readability.
-export const make_stable_string = (json_value) => {
+const make_stable_string = (json_value) => {
   let indent_level = 0;
   const state = ['done', json_value, 'json'];
   const reverser = [];
@@ -73,11 +73,11 @@ export const make_stable_string = (json_value) => {
         result += 'null';
       } else if(typeof top2 === 'object') {
         state.push('}', 'text', 'indent', 'decrement indent level');
-        for(const key in top2)
+        for(const key of Object.keys(top2).sort())
           reverser.push(key);
         const original_length = reverser.length;
         while(reverser.length > 0) {
-          const key = reverser.pop()!;
+          const key = reverser.pop();
           const v2 = (top2)[key];
           if(reverser.length === original_length-1)
             state.push('\n');
@@ -295,32 +295,7 @@ const decrypt = async(symmetric_key, cipher) => {
 };
 
 const history_since = (history, seen_id) => {
-  const result = [];
-  for(const item of history) {
-    if(item.type === 'add') {
-      const {one_id, text, id_to_left} = item;
-      const max_id = one_id + 2 * (text.length - 1);
-      if(max_id <= seen_id)
-        continue;
-      if(one_id > seen_id)
-        result.push(item);
-      result.push({type: 'add', one_id: seen_id + 2, text: text.slice((seen_id + 2 - one_id) / 2), id_to_left: seen_id});
-    } else if(item.type === 'remove') {
-      const {one_id, text, id_to_right} = item;
-      const max_id = one_id + 2 * (text.length - 1);
-      if(max_id <= seen_id)
-        continue;
-      if(one_id > seen_id)
-        result.push(item);
-      result.push({type: 'remove', one_id: seen_id + 2, text: text.slice(0, (one_id - seen_id - 2) / 2), id_to_right});
-    } else if(item.type === 'timestamp') {
-      // Do nothing
-    } else if(item.type === 'device_id') {
-      // Do nothing
-    } else {
-      throw 1239;
-    }
-  }
+  return filter_changes({changes: history, highest_ack_sent: seen_id});
 };
 
 const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: listener = null, interlocutor_latest_history}) => {
@@ -544,6 +519,8 @@ const normalize_dom_change = ({main_data, change, ephemeral_data, self_device_id
   const result = [];
   const {prev_value, removed, inserted, index, new_value} = change;
   let next_clock = (ephemeral_data.clock & -2) + 2 + self_device_id;
+  if(typeof next_clock !== 'number' || next_clock !== next_clock)
+    console.error({next_clock});
   if(removed !== '')
     result.push({type: 'remove', text: removed, op_id: (next_clock += 2) - 2, index});
   if(inserted !== '')
@@ -599,9 +576,11 @@ const normalize_network_change = ({change, ephemeral_data, main_data}) => {
   if(change.type === 'add') {
     const {one_id, id_to_left, text, index_hint} = change;
     const real_id_to_left = possibly_follow_tombstones({ephemeral_data, id: id_to_left});
+    console.log(JSON.parse(JSON.stringify({change, ephemeral_data, main_data})));
     const index = find_index_with_hint({array: main_data.current, index_hint, filter: ({id}) => (id === real_id_to_left)}) + 1;
     return [{type: 'add', text, index, one_id}];
   } else if(change.type === 'remove') {
+    const temp_array = [...main_data.current];
     const result = [];
     const {op_id, ids, text} = change;
     let {index_hint} = change;
@@ -612,7 +591,7 @@ const normalize_network_change = ({change, ephemeral_data, main_data}) => {
       const c = text[i];
       if(ephemeral_data.tombstones[id_to_delete])
         return;
-      const index = find_index_with_hint({array: main_data.current, index_hint, filter: ({id}) => (id === id_to_delete)});
+      const index = find_index_with_hint({array: temp_array, index_hint, filter: ({id}) => (id === id_to_delete)});
       if(index === -1)
         throw 1236;
       index_hint = index + 1;
@@ -620,8 +599,10 @@ const normalize_network_change = ({change, ephemeral_data, main_data}) => {
         partial_op_2 = index;
         partial_op_3 += c;
       } else {
-        if(partial_op_1 !== undefined)
+        if(partial_op_1 !== undefined) {
           result.push({type: 'remove', text: partial_op_3, index: partial_op_1, op_id});
+          temp_array.splice(partial_op_1, partial_op_3.length);
+        }
         partial_op_1 = partial_op_2 = index;
         partial_op_3 = c;
       }
@@ -639,7 +620,7 @@ const generate_network_operations = ({normalizeds, main_data}) => {
   return normalizeds.map((nor_op) => {
     if(nor_op.type === 'add') {
       const {text, index, one_id} = nor_op;
-      const id_to_left = ((index === 0) ? 0 : main_data.current[index - 1].id);
+      const id_to_left = ((index === 0) ? 0 : main_data.current[index - 1].id);  // TODO: .id might fail when normalizeds.length > 1
       return {type: 'add', id_to_left, text, index_hint: index, one_id};
     } else if(nor_op.type === 'remove') {
       const {text, index, op_id} = nor_op;
@@ -732,7 +713,7 @@ const compute_initial_text = async({send_encrypted_data, self_device_id, interlo
   console.log({stored_history});
   send_encrypted_data({type: 'latest clock', value: get_latest_id({history: stored_history, self_device_id})});  // asynchronous action
   const other_latest_history_id = await interlocutor_latest_history.promise;
-  send_encrypted_data({type: 'latest history', value: history_since(stored_history, other_latest_history_id)});  // asynchronous action
+  send_encrypted_data({type: 'latest history', value: generate_network_operations({normalizeds: history_since(stored_history, other_latest_history_id), main_data: data})});  // asynchronous action
   console.log('about to replay');
   const replayed = replay(stored_history);
   data.history.splice(0, data.history.length, ...stored_history);
@@ -761,6 +742,7 @@ const main = async() => {
   const ui = await initialize_ui();
 
   const interlocutor_latest_history = make_resolvable_promise();
+  const done_processing_latest_history = make_resolvable_promise();
 
   const {send_encrypted_data, self_device_id} = await get_encrypted_channel({
     ui,
@@ -774,7 +756,8 @@ const main = async() => {
       } else if(parsed.type === 'latest clock') {
         interlocutor_latest_history.resolve(parsed.value);
       } else if(parsed.type === 'latest history') {
-        console.warn('not implemented yet: "latest history"');
+        handle_network_operations({changes: parsed.value, send_encrypted_data, textarea, main_data, self_device_id, set_textarea_value, ephemeral_data});
+        done_processing_latest_history.resolve();
       } else {
         console.warn('Unrecognized message type (2):', parsed.type);
       }
@@ -830,6 +813,8 @@ const main = async() => {
   });
 
   set_textarea_value(initial_text);
+
+  await done_processing_latest_history.promise;
 
   ui.main_page_body.innerText = '';
 
