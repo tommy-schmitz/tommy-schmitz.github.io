@@ -404,16 +404,7 @@ const sanitize_change = ({untrusted_change, self_device_id}) => {
 };
 
 const filter_changes = ({changes, highest_ack_sent}) => {
-  const result = changes.filter((item) => {
-    if(item.type === 'add') {
-      return (item.one_id + 2 * (item.text.length - 1)) > highest_ack_sent;
-    } else if(item.type === 'remove') {
-      return item.op_id > highest_ack_sent;
-    } else {
-      console.log({changes, highest_ack_sent});
-      throw 1240;
-    }
-  });
+  const result = changes.filter((item) => (get_highest_op_id(item) > highest_ack_sent));
   console.log('filtered changes', result);
   return result;
 };
