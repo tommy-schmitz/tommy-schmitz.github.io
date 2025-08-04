@@ -1,3 +1,6 @@
+// Approximation of √(x+y) = √x + y / (2√x)
+// Error is less than 10% when 0.6x < y < 1.4x
+
 class Deque {
   constructor(chunkSize = 256) {
     this.chunkSize = chunkSize;
