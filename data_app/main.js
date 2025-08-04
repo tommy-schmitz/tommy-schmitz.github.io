@@ -294,8 +294,11 @@ const decrypt = async(symmetric_key, cipher) => {
   return new TextDecoder().decode(decrypted);
 };
 
-const filter_network_operations = ({network_operations, seen_id}) => {
-  return filter_changes({changes: network_operations, highest_ack_sent: seen_id});
+const filter_network_operations = ({network_operations, seen_id, self_device_id}) => {
+  return network_operations.filter((item) => {
+    const id = get_highest_op_id(item);
+    return (id % 2 === self_device_id  &&  id > seen_id);
+  });
 };
 
 const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: listener = null, interlocutor_latest_history}) => {
@@ -470,7 +473,7 @@ const execute_operation = ({state_1, state_2, operation: op}) => {
     const {index, text, one_id} = op;
     state_2.device_id = one_id % 2;
     state_2.clock = Math.max(state_2.clock, one_id + 2*(text.length-1));
-    const new_elements = [...text].map((c, i) => ({id: (one_id + 2 * 2), c}));
+    const new_elements = [...text].map((c, i) => ({id: (one_id + 2 * i), c}));
     state_1.current.splice(index, 0, ...new_elements);
   } else if(op.type === 'remove') {
     const {index, text, op_id} = op;
@@ -498,6 +501,7 @@ const replay = (history) => {
     network_operations.push(...generate_network_operations({normalizeds: [op], main_data: state_1}));
     execute_operation({state_1, state_2, operation: op});
   }
+  console.log({state_1, state_2, network_operations});
   return {state_1, state_2, network_operations};
 };
 
@@ -577,9 +581,11 @@ const normalize_network_change = ({change, ephemeral_data, main_data}) => {
       const c = text[i];
       if(ephemeral_data.tombstones[id_to_delete])
         return;
-      const index = find_index_with_hint({array: temp_array, index_hint, filter: ({id}) => (id === id_to_delete)});
-      if(index === -1)
+      let index = find_index_with_hint({array: temp_array, index_hint, filter: ({id}) => (id === id_to_delete)});
+      if(index === -1) {
+        console.error({index, id_to_delete, temp_array, index_hint});
         throw 1236;
+      }
       index_hint = index + 1;
       if(index === partial_op_2 + 1) {
         partial_op_2 = index;
@@ -588,6 +594,9 @@ const normalize_network_change = ({change, ephemeral_data, main_data}) => {
         if(partial_op_1 !== undefined) {
           result.push({type: 'remove', text: partial_op_3, index: partial_op_1, op_id});
           temp_array.splice(partial_op_1, partial_op_3.length);
+          console.log({latest_operation: result.slice(-1)[0], temp_array: [...temp_array]});
+          if(index > partial_op_1)
+            index -= partial_op_3.length;
         }
         partial_op_1 = partial_op_2 = index;
         partial_op_3 = c;
@@ -607,6 +616,7 @@ const generate_network_operations = ({normalizeds, main_data}) => {
     if(nor_op.type === 'add') {
       const {text, index, one_id} = nor_op;
       const id_to_left = ((index === 0) ? 0 : main_data.current[index - 1].id);
+      console.log({nor_op, id_to_left, text, index, one_id});
       return {type: 'add', id_to_left, text, index_hint: index, one_id};
     } else if(nor_op.type === 'remove') {
       const {text, index, op_id} = nor_op;
@@ -660,7 +670,7 @@ const generate_network_operations = ({normalizeds, main_data}) => {
 //  console.log(JSON.parse(JSON.stringify({data, ephemeral_data})));
 //  const replayed = replay(data.history);
 //  if(JSON.stringify(replayed.current) !== JSON.stringify(data.current))
-//    throw (console.error({data, replayed}), 1235);
+//    throw (console.error({data, replayed}), 1246);
 //  localStorage.setItem('main_text_box_history', JSON.stringify(data.history));
 //};
 
@@ -668,9 +678,9 @@ const process_change = ({ephemeral_data, main_data, operation}) => {
   console.log('process_change', operation);
   execute_operation({state_1: main_data, state_2: ephemeral_data, operation});
   main_data.history.push(operation);
-  const replayed = replay(main_data.history);
-  if(make_stable_string(replayed) !== make_stable_string({state_1: {current: main_data.current}, state_2: ephemeral_data}))
-    throw (console.error({real: {main_data, ephemeral_data}, replayed}), 1235);
+  const {state_1, state_2} = replay(main_data.history);
+  if(make_stable_string({state_1, state_2}) !== make_stable_string({state_1: {current: main_data.current}, state_2: ephemeral_data}))
+    throw (console.error({real: {main_data, ephemeral_data}, replayed: {state_1, state_2}}), 1235);
   localStorage.setItem('main_text_box_history', JSON.stringify(main_data.history));
 };
 
@@ -701,7 +711,7 @@ const compute_initial_text = async({send_encrypted_data, self_device_id, interlo
   const other_latest_history_id = await interlocutor_latest_history.promise;
   console.log('about to replay');
   const replayed = replay(stored_history);
-  send_encrypted_data({type: 'latest history', value: filter_network_operations({...replayed, seen_id: other_latest_history_id})});  // async
+  send_encrypted_data({type: 'latest history', value: filter_network_operations({...replayed, seen_id: other_latest_history_id, self_device_id})});  // async
   data.history.splice(0, data.history.length, ...stored_history);
   data.current.splice(0, data.current.length, ...replayed.state_1.current);
   Object.assign(ephemeral_data.tombstones, replayed.state_2.tombstones);
