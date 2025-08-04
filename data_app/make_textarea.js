@@ -1,4 +1,4 @@
-const make_textarea = (callback) => {
+const make_textarea = ({on_change, on_undo, on_redo}) => {
   const textarea = document.createElement('textarea');
   let prev_value = '';
   let start;
@@ -17,13 +17,22 @@ const make_textarea = (callback) => {
     }
   });
   textarea.addEventListener('input', (e) => {
+    if(e.inputType === 'historyUndo') {
+      textarea.value = prev_value;
+      return on_undo();
+    }
+    if(e.inputType === 'historyRedo') {
+      textarea.value = prev_value;
+      return on_redo();
+    }
+
     const new_value = textarea.value;
     const removed = prev_value.slice(start, end);
     const inserted = new_value.slice(start, start + (new_value.length - prev_value.length + removed.length));
     const expected_new_value = prev_value.slice(0, start) + inserted + prev_value.slice(end);
     if(expected_new_value !== new_value)
       throw (console.error({prev_value, start, end, removed, inserted, expected_new_value, new_value}), 1243);
-    callback({prev_value, removed, inserted, index: start, new_value});
+    on_change({prev_value, removed, inserted, index: start, new_value});
     prev_value = new_value;
   });
   const set_value = (new_value) => {

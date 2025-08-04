@@ -447,11 +447,11 @@ const execute_operation = ({state_1, state_2, operation: op}) => {
     state_1.current.splice(index, 0, ...new_elements);
   } else if(op.type === 'remove') {
     const {index, text, op_id} = op;
-    state_2.device_id = one_id % 2;
-    state_2.clock = Math.max(state_2.clock, one_id + 2*(text.length-1));
+    state_2.device_id = op_id % 2;
+    state_2.clock = Math.max(state_2.clock, op_id + 2*(text.length-1));
     const id_to_left = ((index === 0) ? 0 : state_1.current[index-1].id);
     for(let i=0; i<op.text.length; ++i)
-      tombstones[state_1.current[index+i].id] = {id_to_left, deletion_id: op_id};
+      state_2.tombstones[state_1.current[index+i].id] = {id_to_left, deletion_id: op_id};
     state_1.current.splice(index, text.length);
   } else if(op.type === 'timestamp') {
     // Do nothing
@@ -490,11 +490,25 @@ const normalize_dom_change = ({main_data, change, ephemeral_data, self_device_id
   return result;
 };
 
+const possibly_follow_tombstones = ({ephemeral_data, id}) => {
+  const breadcrumbs = [];
+  while(true) {
+    const tombstone = ephemeral_data.tombstones[id];
+    if(tombstone === undefined) {
+      for(const t of breadcrumbs)
+        t.id_to_left = id;
+      return id;
+    }
+    breadcrumbs.push(tombstone);
+    id = tombstone.id_to_left;
+  }
+};
+
 const find_index_with_hint = ({array, index_hint, filter}) => {
   if(array.length === 0)
     return -1;
 
-  let i = index_hint;
+  let i = Math.min(Math.max(0, index_hint), array.length-1);
   let step = 1;
   while(true) {
     if(filter(array[i]))
@@ -523,7 +537,8 @@ const find_index_with_hint = ({array, index_hint, filter}) => {
 const normalize_network_change = ({change, ephemeral_data, main_data}) => {
   if(change.type === 'add') {
     const {one_id, id_to_left, text, index_hint} = change;
-    const index = find_index_with_hint({array: main_data.current, index_hint, filter: ({id}) => (id === id_to_left)}) + 1;
+    const real_id_to_left = possibly_follow_tombstones({ephemeral_data, id: id_to_left});
+    const index = find_index_with_hint({array: main_data.current, index_hint, filter: ({id}) => (id === real_id_to_left)}) + 1;
     return [{type: 'add', text, index, one_id}];
   } else if(change.type === 'remove') {
     const result = [];
@@ -534,6 +549,8 @@ const normalize_network_change = ({change, ephemeral_data, main_data}) => {
     let partial_op_3 = '';
     ids.forEach((id_to_delete, i) => {
       const c = text[i];
+      if(ephemeral_data.tombstones[id_to_delete])
+        return;
       const index = find_index_with_hint({array: main_data.current, index_hint, filter: ({id}) => (id === id_to_delete)});
       if(index === -1)
         throw 1236;
@@ -660,6 +677,17 @@ const compute_initial_text = async({send_encrypted_data, self_device_id, interlo
   return data.current.map(({c}) => (c)).join('');
 };
 
+const spawn_animation_frame_loop = (callback) => {
+  let previous_timestamp = performance.now();
+  const f = (new_timestamp) => {
+    const elapsed = new_timestamp - previous_timestamp;
+    previous_timestamp = new_timestamp;
+    requestAnimationFrame(f);
+    callback(elapsed);
+  };
+  requestAnimationFrame(f);
+};
+
 const main = async() => {
   const socket_io = await initialize_socket_io();
 
@@ -691,9 +719,10 @@ const main = async() => {
   const to_be_sent = [];
   (async() => {
     while(true) {
+      console.log('syncing');
       if(to_be_sent.length > 0)
         await send_encrypted_data({type: 'changes', value: to_be_sent});
-      await sleep(1000);
+      await sleep(7000);
     }
   })();
 
@@ -704,11 +733,33 @@ const main = async() => {
 
   console.log({initial_text});
 
-  const {textarea, set_value: set_textarea_value} = make_textarea((change) => {
-    const normalizeds = normalize_dom_change({main_data, change, ephemeral_data, self_device_id});
-    to_be_sent.push(...generate_network_operations({normalizeds, main_data}));
-    for(const operation of normalizeds)
-      process_change({ephemeral_data, main_data, operation});
+  let feedback_opacity_timer = 0;
+  const feedback_div = document.createElement('div');
+  spawn_animation_frame_loop((elapsed) => {
+    feedback_opacity_timer = Math.max(0, feedback_opacity_timer - elapsed);
+    feedback_div.style.opacity = 1-(1-feedback_opacity_timer/10000)**2;
+  });
+  const set_feedback_message = (message) => {
+    feedback_div.innerText = message;
+    feedback_opacity_timer = 10000;
+  };
+
+  const {textarea, set_value: set_textarea_value} = make_textarea({
+    on_change: (change) => {
+      const normalizeds = normalize_dom_change({main_data, change, ephemeral_data, self_device_id});
+      to_be_sent.push(...generate_network_operations({normalizeds, main_data}));
+      for(const operation of normalizeds)
+        process_change({ephemeral_data, main_data, operation});
+    },
+
+    // TODO: implement proper undo and redo in this portion of the code
+    // For now, we'll just disable:
+    on_undo: () => {
+      set_feedback_message("Undo/redo functionality hasn't been implemented yet and is currently disabled. Sorry!");
+    },
+    on_redo: () => {
+      set_feedback_message("Undo/redo functionality hasn't been implemented yet and is currently disabled. Sorry!");
+    },
   });
 
   set_textarea_value(initial_text);
@@ -717,6 +768,7 @@ const main = async() => {
 
   console.log('creating textarea');
   ui.main_page_body.appendChild(textarea);
+  ui.main_page_body.appendChild(feedback_div);
 };
 
 main();
