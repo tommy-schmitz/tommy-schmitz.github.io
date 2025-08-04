@@ -605,9 +605,8 @@ const normalize_network_change = ({change, ephemeral_data, main_data}) => {
         partial_op_3 = c;
       }
     });
-    if(partial_op_1 === undefined)
-      throw 1242;
-    result.push({type: 'remove', text: partial_op_3, index: partial_op_1, op_id});
+    if(partial_op_1 !== undefined)
+      result.push({type: 'remove', text: partial_op_3, index: partial_op_1, op_id});
     return result;
   } else {
     throw 1234;
