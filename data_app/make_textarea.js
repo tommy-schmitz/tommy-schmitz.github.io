@@ -22,7 +22,7 @@ const make_textarea = (callback) => {
     const inserted = new_value.slice(start, start + (new_value.length - prev_value.length + removed.length));
     const expected_new_value = prev_value.slice(0, start) + inserted + prev_value.slice(end);
     if(expected_new_value !== new_value)
-      throw (console.error({prev_value, start, end, removed, inserted, expected_new_value, new_value}), 1234);
+      throw (console.error({prev_value, start, end, removed, inserted, expected_new_value, new_value}), 1243);
     callback({prev_value, removed, inserted, index: start, new_value});
     prev_value = new_value;
   });

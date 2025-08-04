@@ -314,7 +314,7 @@ const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: li
       } else if(message.type === 'encrypted') {
         const plaintext = await decrypt(symmetric_key, message.ciphertext);
         const parsed = JSON.parse(plaintext);
-        console.log({parsed});
+        console.log('received encrypted message', {parsed});
         if(parsed.type === 'public key received') {
           interlocutor_received_public_key.resolve();
         } else {
@@ -353,24 +353,70 @@ const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: li
   return {send_encrypted_data, set_decrypted_message_listener, self_device_id};
 };
 
+const sanitize_change = ({untrusted_change, self_device_id}) => {
+  if(untrusted_change.type === 'add') {
+    const clock = untrusted_change.one_id;
+    const new_clock = (clock & -2) + (1 - self_device_id);
+    return {...untrusted_change, one_id: new_clock};
+  } else if(untrusted_change.type === 'remove') {
+    const clock = untrusted_change.op_id;
+    const new_clock = (clock & -2) + (1 - self_device_id);
+    return {...untrusted_change, op_id: new_clock};
+  } else {
+    throw 1241;
+  }
+};
+
+const filter_changes = ({changes, highest_ack_sent}) => {
+  const result = changes.filter((item) => {
+    if(item.type === 'add') {
+      return (item.one_id + 2 * (item.text.length - 1)) > highest_ack_sent;
+    } else if(item.type === 'remove') {
+      return item.op_id > highest_ack_sent;
+    } else {
+      console.log({changes, highest_ack_sent});
+      throw 1240;
+    }
+  });
+  console.log('filtered changes', result);
+  return result;
+};
+
+const get_highest_op_id = (item) => {
+  if(item.type === 'add') {
+    return item.one_id + 2 * (item.text.length - 1);
+  } else if(item.type === 'remove') {
+    return item.op_id;
+  } else {
+    throw 1245;
+  }
+};
+
 const handle_network_operations = (() => {
   let highest_ack_sent = 0;
 
-  return ({changes, textarea, main_data: data}) => {
-    const id_left_of_selection_start = ((textarea.selectionStart === 0) ? 0 : data.current[textarea.selectionStart].id);
-    const id_left_of_selection_end   = ((textarea.selectionEnd   === 0) ? 0 : data.current[textarea.selectionEnd  ].id);
-    for(const change of parsed.value.slice(seen_index + 1)) {
-      process_change({ephemeral_data, main_data: data, change: {...change, id: (change.id & -2) + (1 - self_device_id)}});
-      highest_ack_sent = Math.max(highest_ack_sent, change.id);
+  return ({send_encrypted_data, changes, textarea, main_data: data, self_device_id, set_textarea_value, ephemeral_data}) => {
+    const prev_selection_start = textarea.selectionStart;
+    const prev_selection_end   = textarea.selectionEnd;
+    const id_left_of_selection_start = ((textarea.selectionStart === 0) ? 0 : data.current[textarea.selectionStart - 1].id);
+    const id_left_of_selection_end   = ((textarea.selectionEnd   === 0) ? 0 : data.current[textarea.selectionEnd   - 1].id);
+    for(const untrusted_change of filter_changes({changes, highest_ack_sent})) {
+      const sanitized_change = sanitize_change({untrusted_change, self_device_id});
+      const normalizeds = normalize_network_change({change: sanitized_change, ephemeral_data, main_data: data});
+      for(const operation of normalizeds)
+        process_change({ephemeral_data, main_data: data, operation});
+      highest_ack_sent = Math.max(highest_ack_sent, get_highest_op_id(sanitized_change));
     }
     send_encrypted_data({type: 'ack', value: highest_ack_sent});  // asynchronous action
-    textarea.value = data.current.map(({c}) => (c)).join('');
-    textarea.selectionStart = get_index_from_id(id_left_of_selection_start);
-    textarea.selectionEnd = get_index_from_id(id_left_of_selection_end);
+    set_textarea_value(data.current.map(({c}) => (c)).join(''));
+    textarea.selectionStart = find_index_with_hint({array: data.current, index_hint: prev_selection_start,
+                                                    filter: ({id}) => (id === id_left_of_selection_start)}) + 1;
+    textarea.selectionEnd   = find_index_with_hint({array: data.current, index_hint: prev_selection_end  ,
+                                                    filter: ({id}) => (id === id_left_of_selection_end  )}) + 1;
   };
 })();
 
-const handle_ack = (ack) => {
+const handle_ack = ({to_be_sent, ack}) => {
   to_be_sent.splice(0, to_be_sent.length, ...to_be_sent.filter((x) => (x.one_id > ack)));
 };
 
@@ -392,21 +438,21 @@ const get_self_device_id = async({master_public_key, partner_key}) => {
   }
 };
 
-const execute_operation = ({state, op}) => {
+const execute_operation = ({state_1, state_2, operation: op}) => {
   if(op.type === 'add') {
     const {index, text, one_id} = op;
-    state.device_id = one_id % 2;
-    state.clock = Math.max(state.clock, one_id + 2*(text.length-1));
+    state_2.device_id = one_id % 2;
+    state_2.clock = Math.max(state_2.clock, one_id + 2*(text.length-1));
     const new_elements = [...text].map((c, i) => ({id: (one_id + 2 * 2), c}));
-    state.current.splice(index, 0, ...new_elements);
+    state_1.current.splice(index, 0, ...new_elements);
   } else if(op.type === 'remove') {
     const {index, text, op_id} = op;
-    state.device_id = one_id % 2;
-    state.clock = Math.max(state.clock, one_id + 2*(text.length-1));
-    const id_to_left = ((index === 0) ? 0 : state.current[index-1].id);
+    state_2.device_id = one_id % 2;
+    state_2.clock = Math.max(state_2.clock, one_id + 2*(text.length-1));
+    const id_to_left = ((index === 0) ? 0 : state_1.current[index-1].id);
     for(let i=0; i<op.text.length; ++i)
-      tombstones[state[index+i].id] = {id_to_left, deletion_id: op_id};
-    state.current.splice(index, text.length);
+      tombstones[state_1.current[index+i].id] = {id_to_left, deletion_id: op_id};
+    state_1.current.splice(index, text.length);
   } else if(op.type === 'timestamp') {
     // Do nothing
   } else if(op.type === 'device_id') {
@@ -418,108 +464,200 @@ const execute_operation = ({state, op}) => {
 
 const replay = (history) => {
   console.log({history});
-  const state = {
+  const state_1 = {
     current: [],
+  };
+  const state_2 = {
     tombstones: {},
     device_id: 0,
     clock: 0,
+    timestamp: 0,
   };
   for(const op of history) {
-    execute_operation({state, op});
+    execute_operation({state_1, state_2, op});
   }
-  return state;
+  return {state_1, state_2};
 };
 
-const normalize_change = ({main_data: data, change}) => {
-  const {prev_value, removed, inserted, index, new_value, clock} = change;
-  const id_to_left = ((index === 0) ? 0 : data.current[index-1].id);
-  const id_to_right = ((index+removed.length === prev_value.length) ? 0 : data.current[index+removed.length].id);
-  return {
-    id_to_left,
-    remove: data.current.slice(index, removed.length).map(({id}) => (id)),
-    add: [...inserted].map((c, i) => ({id: clock + 2*i, c})),
-    clock,
-  };
+const normalize_dom_change = ({main_data, change, ephemeral_data, self_device_id}) => {
+  const result = [];
+  const {prev_value, removed, inserted, index, new_value} = change;
+  let next_clock = (ephemeral_data.clock & -2) + 2 + self_device_id;
+  if(removed !== '')
+    result.push({type: 'remove', text: removed, op_id: (next_clock += 2) - 2, index});
+  if(inserted !== '')
+    result.push({type: 'add', text: inserted, index, one_id: next_clock});
+  return result;
 };
 
-const process_change = ({ephemeral_data, main_data: data, change: {id_to_left, remove, add, clock}}) => {
-  const index = data.current.findIndex((c) => (c.id === id_to_left)) + 1;
-  const removed = data.current.slice(index, remove.length).map(({c}) => (c)).join('');
-  const inserted = add.map(({c}) => (c)).join('');
-  const now = Date.now();
-  const device_id = clock % 2;
-  const recent = data.history.slice(-1)[0];
-  const maybe_mergeable = (
-        (ephemeral_data.timestamp > now - 5000)
-    &&  (ephemeral_data.device_id === device_id)
-    &&  (recent.one_id !== undefined)
-    &&  (clock === recent.one_id + 2 * recent.text.length)
-  );
-  const id_to_right = ((index+remove.length === data.current.length) ? 0 : data.current[index+remove.length].id);
-  if(maybe_mergeable  &&  recent.type === 'remove'  &&  id_to_right === recent.id_to_right) {
-    recent.text = removed + recent.text;
-    if(inserted.length > 0)
-      data.history.push({type: 'add', text: inserted, id_to_left, one_id: clock});
-  } else if(maybe_mergeable  &&  recent.type === 'add'  &&  id_to_left === clock - 2) {
-    recent.text += inserted;
-    if(removed.length > 0)
-      data.history.push({type: 'remove', text: removed, id_to_right, one_id: clock});
+const find_index_with_hint = ({array, index_hint, filter}) => {
+  if(array.length === 0)
+    return -1;
+
+  let i = index_hint;
+  let step = 1;
+  while(true) {
+    if(filter(array[i]))
+      return i;
+    i += step;
+    step = ((step > 0) ? -step - 1 : -step + 1);
+    if(i === -1 || i === array.length)
+      break;
+  }
+
+  if(i === -1) {
+    i += step;
+    for(; i<array.length; ++i)
+      if(filter(array[i]))
+        return i;
   } else {
-    if(ephemeral_data.timestamp <= now - 5000) {
-      data.history.push({type: 'timestamp', value: now});
-      ephemeral_data.timestamp = now;
-    }
-    if(ephemeral_data.device_id !== device_id) {
-      ephemeral_data.device_id = device_id;
-    }
-    if(removed.length > 0)
-      data.history.push({type: 'remove', text: removed, id_to_right, clock});
-    if(inserted.length > 0)
-      data.history.push({type: 'add', text: inserted, id_to_left, clock});
+    i += step;
+    for(; i>=0; --i)
+      if(filter(array[i]))
+        return i;
   }
-  for(let i=index; i<index+removed.length; ++i)
-    ephemeral_data.tombstones[data.current[i].id] = id_to_left;
-  const new_elements = [...inserted].map((c, i) => ({id: clock + 2*i, c}));
-  data.current.splice(index, removed.length, ...new_elements);
-  console.log(JSON.parse(JSON.stringify({data, ephemeral_data})));
-  const replayed = replay(data.history);
-  if(JSON.stringify(replayed.current) !== JSON.stringify(data.current))
-    throw (console.error({data, replayed}), 1235);
-  localStorage.setItem('main_text_box_history', JSON.stringify(data.history));
+
+  return -1;
+};
+
+const normalize_network_change = ({change, ephemeral_data, main_data}) => {
+  if(change.type === 'add') {
+    const {one_id, id_to_left, text, index_hint} = change;
+    const index = find_index_with_hint({array: main_data.current, index_hint, filter: ({id}) => (id === id_to_left)}) + 1;
+    return [{type: 'add', text, index, one_id}];
+  } else if(change.type === 'remove') {
+    const result = [];
+    const {op_id, ids, text} = change;
+    let {index_hint} = change;
+    let partial_op_1 = undefined;
+    let partial_op_2 = undefined;
+    let partial_op_3 = '';
+    ids.forEach((id_to_delete, i) => {
+      const c = text[i];
+      const index = find_index_with_hint({array: main_data.current, index_hint, filter: ({id}) => (id === id_to_delete)});
+      if(index === -1)
+        throw 1236;
+      index_hint = index + 1;
+      if(index === partial_op_2 + 1) {
+        partial_op_2 = index;
+        partial_op_3 += c;
+      } else {
+        if(partial_op_1 !== undefined)
+          result.push({type: 'remove', text: partial_op_3, index: partial_op_1, op_id});
+        partial_op_1 = partial_op_2 = index;
+        partial_op_3 = c;
+      }
+    });
+    if(partial_op_1 === undefined)
+      throw 1242;
+    result.push({type: 'remove', text: partial_op_3, index: partial_op_1, op_id});
+    return result;
+  } else {
+    throw 1234;
+  }
+};
+
+const generate_network_operations = ({normalizeds, main_data}) => {
+  return normalizeds.map((nor_op) => {
+    if(nor_op.type === 'add') {
+      const {text, index, one_id} = nor_op;
+      const id_to_left = ((index === 0) ? 0 : main_data.current[index - 1].id);
+      return {type: 'add', id_to_left, text, index_hint: index, one_id};
+    } else if(nor_op.type === 'remove') {
+      const {text, index, op_id} = nor_op;
+      const ids = main_data.current.slice(index, index + text.length).map(({id}) => (id));
+      return {type: 'remove', ids, text, index_hint: index, op_id};
+    } else {
+      throw 1244;
+    }
+  });
+};
+
+//const process_change = ({ephemeral_data, main_data: data, change: {id_to_left, remove, add, clock}}) => {
+//  const index = data.current.findIndex((c) => (c.id === id_to_left)) + 1;
+//  const removed = data.current.slice(index, remove.length).map(({c}) => (c)).join('');
+//  const inserted = add.map(({c}) => (c)).join('');
+//  const now = Date.now();
+//  const device_id = clock % 2;
+//  const recent = data.history.slice(-1)[0];
+//  const maybe_mergeable = (
+//        (ephemeral_data.timestamp > now - 5000)
+//    &&  (ephemeral_data.device_id === device_id)
+//    &&  (recent.one_id !== undefined)
+//    &&  (clock === recent.one_id + 2 * recent.text.length)
+//  );
+//  const id_to_right = ((index+remove.length === data.current.length) ? 0 : data.current[index+remove.length].id);
+//  if(maybe_mergeable  &&  recent.type === 'remove'  &&  id_to_right === recent.id_to_right) {
+//    recent.text = removed + recent.text;
+//    if(inserted.length > 0)
+//      data.history.push({type: 'add', text: inserted, index, one_id: clock});
+//  } else if(maybe_mergeable  &&  recent.type === 'add'  &&  id_to_left === clock - 2) {
+//    recent.text += inserted;
+//    if(removed.length > 0)
+//      data.history.push({type: 'remove', text: removed, id_to_right, one_id: clock});
+//  } else {
+//    if(ephemeral_data.timestamp <= now - 5000) {
+//      data.history.push({type: 'timestamp', value: now});
+//      ephemeral_data.timestamp = now;
+//    }
+//    if(ephemeral_data.device_id !== device_id) {
+//      ephemeral_data.device_id = device_id;
+//    }
+//    if(removed.length > 0)
+//      data.history.push({type: 'remove', text: removed, id_to_right, clock});
+//    if(inserted.length > 0)
+//      data.history.push({type: 'add', text: inserted, id_to_left, clock});
+//  }
+//  for(let i=index; i<index+removed.length; ++i)
+//    ephemeral_data.tombstones[data.current[i].id] = id_to_left;
+//  const new_elements = [...inserted].map((c, i) => ({id: clock + 2*i, c}));
+//  data.current.splice(index, removed.length, ...new_elements);
+//  console.log(JSON.parse(JSON.stringify({data, ephemeral_data})));
+//  const replayed = replay(data.history);
+//  if(JSON.stringify(replayed.current) !== JSON.stringify(data.current))
+//    throw (console.error({data, replayed}), 1235);
+//  localStorage.setItem('main_text_box_history', JSON.stringify(data.history));
+//};
+
+const process_change = ({ephemeral_data, main_data, operation}) => {
+  execute_operation({state_1: main_data, state_2: ephemeral_data, operation});
 };
 
 const get_latest_id = ({history, self_device_id}) => {
   for(let i=history.length-1; i>=0; --i) {
     const item = history[i];
-    if(item.type === 'add'  ||  item.type === 'remove') {
+    if(item.type === 'add') {
       const device_id = item.one_id % 2;
       if(device_id === self_device_id)
         continue;
       return item.one_id + 2 * (item.text.length - 1);
+    } else if(item.type === 'remove') {
+      const device_id = item.op_id % 2;
+      if(device_id === self_device_id)
+        continue;
+      return item.op_id;
     } else {
       continue;
     }
   }
 };
 
-const compute_initial_text = async({send_encrypted_data, self_device_id, interlocutor_latest_history}) => {
+const compute_initial_text = async({send_encrypted_data, self_device_id, interlocutor_latest_history, main_data: data, ephemeral_data}) => {
   const stored = localStorage.getItem('main_text_box_history');
-  if(stored === null) {
-    return '';
-  } else {
-    const stored_history = JSON.parse(stored);
-    send_encrypted_data({type: 'latest history', value: get_latest_id({history: stored_history, self_device_id})});  // asynchronous action
-    const other_latest_history_id = await interlocutor_latest_history.promise;
-    send_encrypted_data(history_since(stored_history, other_latest_history_id));  // asynchronous action
-    const replayed = replay(stored_history);
-    data.history.splice(0, data.history.length, ...stored_history);
-    data.current.splice(0, data.current.length, ...replayed.current);
-    Object.assign(ephemeral_data.tombstones, replayed.tombstones);
-    ephemeral_data.timestamp = replayed.timestamp;
-    ephemeral_data.clock = replayed.clock;
-    ephemeral_data.device_id = replayed.device_id;
-    return data.current.map(({c}) => (c)).join('');
-  }
+  const stored_history = ((stored === null) ? [] : JSON.parse(stored));
+  console.log({stored_history});
+  send_encrypted_data({type: 'latest clock', value: get_latest_id({history: stored_history, self_device_id})});  // asynchronous action
+  const other_latest_history_id = await interlocutor_latest_history.promise;
+  send_encrypted_data({type: 'latest history', value: history_since(stored_history, other_latest_history_id)});  // asynchronous action
+  console.log('about to replay');
+  const replayed = replay(stored_history);
+  data.history.splice(0, data.history.length, ...stored_history);
+  data.current.splice(0, data.current.length, ...replayed.state_1.current);
+  Object.assign(ephemeral_data.tombstones, replayed.state_2.tombstones);
+  ephemeral_data.timestamp = replayed.state_2.timestamp;
+  ephemeral_data.clock = replayed.state_2.clock;
+  ephemeral_data.device_id = replayed.state_2.device_id;
+  return data.current.map(({c}) => (c)).join('');
 };
 
 const main = async() => {
@@ -535,11 +673,13 @@ const main = async() => {
     interlocutor_latest_history,
     handle_decrypted_message: ({message: parsed}) => {
       if(parsed.type === 'changes') {
-        handle_network_operation({changes: parsed.value, send_encrypted_data, textarea, main_data});
+        handle_network_operations({changes: parsed.value, send_encrypted_data, textarea, main_data, self_device_id, set_textarea_value, ephemeral_data});
       } else if(parsed.type === 'ack') {
-        handle_ack(parsed.value);
-      } else if(parsed.type === 'latest history') {
+        handle_ack({to_be_sent, ack: parsed.value});
+      } else if(parsed.type === 'latest clock') {
         interlocutor_latest_history.resolve(parsed.value);
+      } else if(parsed.type === 'latest history') {
+        console.warn('not implemented yet: "latest history"');
       } else {
         console.warn('Unrecognized message type (2):', parsed.type);
       }
@@ -557,23 +697,25 @@ const main = async() => {
     }
   })();
 
-  let ephemeral_data = {timestamp: Date.now(), tombstones: {}, device_id: 0, clock: 0};
-  let main_data = {current: [], history: [{type: 'timestamp', value: Date.now()}]};
+  let ephemeral_data = {timestamp: 0, tombstones: {}, device_id: 0, clock: 0};
+  let main_data = {current: [], history: []};
 
-  const initial_text = await compute_initial_text({send_encrypted_data, self_device_id, interlocutor_latest_history});
+  const initial_text = await compute_initial_text({send_encrypted_data, self_device_id, interlocutor_latest_history, main_data, ephemeral_data});
 
-  const {textarea, set_value: set_textarea_value} = make_textarea(({prev_value, removed, inserted, index, new_value}) => {
-    const normalized = normalize_change(change);
-    to_be_sent.push(normalized);
-    process_change(normalized);
+  console.log({initial_text});
+
+  const {textarea, set_value: set_textarea_value} = make_textarea((change) => {
+    const normalizeds = normalize_dom_change({main_data, change, ephemeral_data, self_device_id});
+    to_be_sent.push(...generate_network_operations({normalizeds, main_data}));
+    for(const operation of normalizeds)
+      process_change({ephemeral_data, main_data, operation});
   });
 
   set_textarea_value(initial_text);
 
   ui.main_page_body.innerText = '';
 
-  set_textarea_value;
-
+  console.log('creating textarea');
   ui.main_page_body.appendChild(textarea);
 };
 
