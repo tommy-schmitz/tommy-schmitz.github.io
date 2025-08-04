@@ -432,9 +432,12 @@ const handle_network_operations = (() => {
     const id_left_of_selection_end   = ((textarea.selectionEnd   === 0) ? 0 : data.current[textarea.selectionEnd   - 1].id);
     for(const untrusted_change of filter_changes({changes, highest_ack_sent})) {
       const sanitized_change = sanitize_change({untrusted_change, self_device_id});
+
+//      execute_network_operation({operation: sanitized_change, ephemeral_data, main_data: data});  // Someday implement like this instead?
       const normalizeds = normalize_network_change({change: sanitized_change, ephemeral_data, main_data: data});
       for(const operation of normalizeds)
         process_change({ephemeral_data, main_data: data, operation});
+
       highest_ack_sent = Math.max(highest_ack_sent, get_highest_op_id(sanitized_change));
     }
     send_encrypted_data({type: 'ack', value: highest_ack_sent});  // asynchronous action
