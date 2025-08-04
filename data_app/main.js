@@ -294,8 +294,8 @@ const decrypt = async(symmetric_key, cipher) => {
   return new TextDecoder().decode(decrypted);
 };
 
-const history_since = (history, seen_id) => {
-  return filter_changes({changes: history, highest_ack_sent: seen_id});
+const filter_network_operations = ({network_operations, seen_id}) => {
+  return filter_changes({changes: network_operations, highest_ack_sent: seen_id});
 };
 
 const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: listener = null, interlocutor_latest_history}) => {
@@ -502,9 +502,12 @@ const replay = (history) => {
   console.log('replay()', {history});
   const state_1 = {current: []};
   const state_2 = {tombstones: {}, device_id: 0, clock: 0, timestamp: 0};
-  for(const op of history)
+  const network_operations = [];
+  for(const op of history) {
+    network_operations.push(...generate_network_operations({normalizeds: [op], main_data: state_1}));
     execute_operation({state_1, state_2, operation: op});
-  return {state_1, state_2};
+  }
+  return {state_1, state_2, network_operations};
 };
 
 const normalize_dom_change = ({main_data, change, ephemeral_data, self_device_id}) => {
@@ -612,13 +615,7 @@ const generate_network_operations = ({normalizeds, main_data}) => {
   return normalizeds.map((nor_op) => {
     if(nor_op.type === 'add') {
       const {text, index, one_id} = nor_op;
-      const id_to_left = ((index === 0) ? 0 : main_data.current[index - 1].id);  // TODO: .id might fail when normalizeds.length > 1
-                                                                                 // Idea: both call sites can potentially be refactored
-                                                                                 // so that the necessary data structures are generated
-                                                                                 // alongside (basically a reimplementation of replay()
-                                                                                 // and execute_operation() but also generating network
-                                                                                 // operations on the side instead of just generating
-                                                                                 // the data structures)
+      const id_to_left = ((index === 0) ? 0 : main_data.current[index - 1].id);
       return {type: 'add', id_to_left, text, index_hint: index, one_id};
     } else if(nor_op.type === 'remove') {
       const {text, index, op_id} = nor_op;
@@ -711,9 +708,9 @@ const compute_initial_text = async({send_encrypted_data, self_device_id, interlo
   console.log({stored_history});
   send_encrypted_data({type: 'latest clock', value: get_latest_id({history: stored_history, self_device_id})});  // asynchronous action
   const other_latest_history_id = await interlocutor_latest_history.promise;
-  send_encrypted_data({type: 'latest history', value: generate_network_operations({normalizeds: history_since(stored_history, other_latest_history_id), main_data: data})});  // asynchronous action
   console.log('about to replay');
   const replayed = replay(stored_history);
+  send_encrypted_data({type: 'latest history', value: filter_network_operations({...replayed, seen_id: other_latest_history_id})});  // async
   data.history.splice(0, data.history.length, ...stored_history);
   data.current.splice(0, data.current.length, ...replayed.state_1.current);
   Object.assign(ephemeral_data.tombstones, replayed.state_2.tombstones);
@@ -795,9 +792,10 @@ const main = async() => {
   const {textarea, set_value: set_textarea_value} = make_textarea({
     on_change: (change) => {
       const normalizeds = normalize_dom_change({main_data, change, ephemeral_data, self_device_id});
-      to_be_sent.push(...generate_network_operations({normalizeds, main_data}));
-      for(const operation of normalizeds)
+      for(const operation of normalizeds) {
+        to_be_sent.push(...generate_network_operations({normalizeds: [operation], main_data}));
         process_change({ephemeral_data, main_data, operation});
+      }
     },
 
     // TODO: implement proper undo and redo in this portion of the code
