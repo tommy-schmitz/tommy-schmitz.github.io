@@ -613,6 +613,12 @@ const generate_network_operations = ({normalizeds, main_data}) => {
     if(nor_op.type === 'add') {
       const {text, index, one_id} = nor_op;
       const id_to_left = ((index === 0) ? 0 : main_data.current[index - 1].id);  // TODO: .id might fail when normalizeds.length > 1
+                                                                                 // Idea: both call sites can potentially be refactored
+                                                                                 // so that the necessary data structures are generated
+                                                                                 // alongside (basically a reimplementation of replay()
+                                                                                 // and execute_operation() but also generating network
+                                                                                 // operations on the side instead of just generating
+                                                                                 // the data structures)
       return {type: 'add', id_to_left, text, index_hint: index, one_id};
     } else if(nor_op.type === 'remove') {
       const {text, index, op_id} = nor_op;
