@@ -392,6 +392,30 @@ const get_self_device_id = async({master_public_key, partner_key}) => {
   }
 };
 
+const execute_operation = ({state, op}) => {
+  if(op.type === 'add') {
+    const {index, text, one_id} = op;
+    state.device_id = one_id % 2;
+    state.clock = Math.max(state.clock, one_id + 2*(text.length-1));
+    const new_elements = [...text].map((c, i) => ({id: (one_id + 2 * 2), c}));
+    state.current.splice(index, 0, ...new_elements);
+  } else if(op.type === 'remove') {
+    const {index, text, op_id} = op;
+    state.device_id = one_id % 2;
+    state.clock = Math.max(state.clock, one_id + 2*(text.length-1));
+    const id_to_left = ((index === 0) ? 0 : state.current[index-1].id);
+    for(let i=0; i<op.text.length; ++i)
+      tombstones[state[index+i].id] = {id_to_left, deletion_id: op_id};
+    state.current.splice(index, text.length);
+  } else if(op.type === 'timestamp') {
+    // Do nothing
+  } else if(op.type === 'device_id') {
+    // Do nothing
+  } else {
+    throw 1237;
+  }
+};
+
 const replay = (history) => {
   console.log({history});
   const state = {
@@ -401,31 +425,7 @@ const replay = (history) => {
     clock: 0,
   };
   for(const op of history) {
-    if(op.type === 'add') {
-      const {id_to_left, text, one_id} = op;
-      state.device_id = one_id % 2;
-      state.clock = Math.max(state.clock, one_id + 2*(text.length-1));
-      const index = state.current.findIndex(({id}) => (id === id_to_left)) + 1;
-      const new_elements = [...text].map((c, i) => ({id: (one_id + 2 * 2), c}));
-      state.splice(index, 0, ...new_elements);
-    } else if (op.type === 'remove') {
-      const {id_to_right, text, one_id} = op;
-      state.device_id = one_id % 2;
-      state.clock = Math.max(state.clock, one_id + 2*(text.length-1));
-      const index = ((id_to_right === 0) ? state.current.length : state.current.findIndex(({id}) => (id === id_to_right)) - text.length);
-      if(index < 0)
-        throw 1236;
-      const id_to_left = ((index === 0) ? 0 : state.current[index-1].id);
-      for(let i=0; i<op.text.length; ++i)
-        tombstones[state[index+i].id] = {id_to_left, deletion_id: one_id + 2*(text.length-1-i)};
-      state.splice(index, text.length);
-    } else if(op.type === 'timestamp') {
-      // Do nothing
-    } else if(op.type === 'device_id') {
-      // Do nothing
-    } else {
-      throw 1237;
-    }
+    execute_operation({state, op});
   }
   return state;
 };
