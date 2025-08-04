@@ -499,19 +499,11 @@ const execute_operation = ({state_1, state_2, operation: op}) => {
 };
 
 const replay = (history) => {
-  console.log({history});
-  const state_1 = {
-    current: [],
-  };
-  const state_2 = {
-    tombstones: {},
-    device_id: 0,
-    clock: 0,
-    timestamp: 0,
-  };
-  for(const op of history) {
+  console.log('replay()', {history});
+  const state_1 = {current: []};
+  const state_2 = {tombstones: {}, device_id: 0, clock: 0, timestamp: 0};
+  for(const op of history)
     execute_operation({state_1, state_2, operation: op});
-  }
   return {state_1, state_2};
 };
 
