@@ -495,7 +495,7 @@ const execute_operation = ({state_1, state_2, operation: op}) => {
 const push_child = ({ephemeral_data, parent_id, child_id}) => {
   if(ephemeral_data.nodes[parent_id] === undefined)
     ephemeral_data.nodes[parent_id] = [];
-  ephemeral_data.nodes[parent_id].push(child_id);
+  ephemeral_data.nodes[parent_id].unshift(child_id);
 };
 
 const delete_child = ({ephemeral_data, parent_id, child_id}) => {
@@ -515,7 +515,7 @@ const undo_one_operation = ({state_1, state_2}) => {
   if(op.type === 'add') {
     const {index, text, one_id} = op;
     state_1.current.splice(index, text.length);
-    const id_to_left = ((index === 0) ? 0 : state_1.current[index-1]);
+    const id_to_left = ((index === 0) ? 0 : state_1.current[index-1].id);
     delete_child({ephemeral_data: state_2, parent_id: id_to_left, child_id: one_id});
   } else if(op.type === 'remove') {
     const {index, text, one_id, op_id} = op;
@@ -691,7 +691,7 @@ const generate_network_operations = ({normalizeds, main_data}) => {
 
 const save_to_disk = ({main_data, ephemeral_data}) => {
   // Sanity check:
-  const replayed = replay(main_data.history);
+  const {network_operations, ...replayed} = replay(main_data.history);
   if(make_stable_string(replayed) !== make_stable_string({state_1: main_data, state_2: ephemeral_data}))
     throw (console.error({real: {main_data, ephemeral_data}, replayed}), 1235);
 
