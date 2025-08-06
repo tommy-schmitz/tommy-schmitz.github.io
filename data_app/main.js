@@ -612,18 +612,26 @@ const process_network_operation = ({operation: change, ephemeral_data, main_data
 
   if(change.type === 'add') {
     const {one_id, id_to_left, text, index_hint} = change;
-    const real_id_to_left = possibly_follow_tombstones({ephemeral_data, id: id_to_left});
-    console.log(JSON.parse(JSON.stringify({change, ephemeral_data, main_data})));
 
-    // Problem: the index computed here may be wrong. If the interlocutor also inserted at the same position, then one of the two
-    // of you must come first, and the other must come afterward.
-    const index = find_index_with_hint({array: main_data.current, index_hint, filter: ({id}) => (id === real_id_to_left)}) + 1;
+    const children = ephemeral_data.nodes[id_to_left] || [0];
 
-    // To fix problem, undo operations here, until higher rank conflicting operations are gone.
-
-    process_change({operation: {type: 'add', text, index, one_id}, main_data, ephemeral_data});
-
-    // Now replay all the operations that we undid.
+    if(children[0] > one_id) {
+      const op_buffer = [];
+      while((ephemeral_data.nodes[id_to_left]||[0])[0] > one_id) {
+        const last_op = main_data.history.slice(-1)[0];
+        op_buffer.push(last_op);
+        undo_operation({state_1: main_data, state_2: ephemeral_data, operation: last_op});
+      }
+      const index = find_index_with_hint({array: main_data.current, index_hint, filter: ({id}) => (id === id_to_left)}) + 1;
+      process_change({operation: {type: 'add', text, index, one_id}, main_data, ephemeral_data});  // TODO: History will be handled improperly
+                                                                                                   // at this point.
+      while(op_buffer.length > 0)
+        execute_operation({state_1: main_data, state_2: ephemeral_data, operation: op_buffer.pop()});
+    } else {
+      const real_id_to_left = possibly_follow_tombstones({ephemeral_data, id: id_to_left});
+      const index = find_index_with_hint({array: main_data.current, index_hint, filter: ({id}) => (id === real_id_to_left)}) + 1;
+      process_change({operation: {type: 'add', text, index, one_id}, main_data, ephemeral_data});
+    }
   } else if(change.type === 'remove') {
     const {op_id, ids, text} = change;
     let {index_hint} = change;
