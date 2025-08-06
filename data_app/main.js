@@ -432,7 +432,8 @@ const handle_network_operations = (() => {
     const id_left_of_selection_end   = ((textarea.selectionEnd   === 0) ? 0 : data.current[textarea.selectionEnd   - 1].id);
     for(const untrusted_change of filter_changes({changes, highest_ack_sent})) {
       const sanitized_change = sanitize_change({untrusted_change, self_device_id});
-      process_network_operation({operation: sanitized_change, ephemeral_data, main_data: data});
+      execute_network_operation({operation: sanitized_change, ephemeral_data, main_data: data});
+      save_to_disk({main_data: data, ephemeral_data});
       highest_ack_sent = Math.max(highest_ack_sent, get_highest_op_id(sanitized_change));
     }
     send_encrypted_data({type: 'ack', value: highest_ack_sent});  // asynchronous action
@@ -488,6 +489,7 @@ const execute_operation = ({state_1, state_2, operation: op}) => {
   } else {
     throw 1237;
   }
+  state_1.history.push(op);
 };
 
 const push_child = ({ephemeral_data, parent_id, child_id}) => {
@@ -507,7 +509,9 @@ const delete_child = ({ephemeral_data, parent_id, child_id}) => {
   }
 };
 
-const undo_operation = ({state_1, state_2, operation: op}) => {
+const undo_one_operation = ({state_1, state_2}) => {
+  const op = state_1.history.pop();
+
   if(op.type === 'add') {
     const {index, text, one_id} = op;
     state_1.current.splice(index, text.length);
@@ -537,7 +541,7 @@ const undo_operation = ({state_1, state_2, operation: op}) => {
 
 const replay = (history) => {
   console.log('replay()', {history});
-  const state_1 = {current: []};
+  const state_1 = {current: [], history: []};
   const state_2 = {tombstones: {}, clock: 0, timestamp: 0, nodes: {}};
   const network_operations = [];
   for(const op of history) {
@@ -605,11 +609,7 @@ const find_index_with_hint = ({array, index_hint, filter}) => {
   return -1;
 };
 
-const process_network_operation = ({operation: change, ephemeral_data, main_data}) => {
-//      const normalizeds = normalize_network_change({change: sanitized_change, ephemeral_data, main_data: data});
-//      for(const operation of normalizeds)
-//        process_change({ephemeral_data, main_data: data, operation});
-
+const execute_network_operation = ({operation: change, ephemeral_data, main_data}) => {
   if(change.type === 'add') {
     const {one_id, id_to_left, text, index_hint} = change;
 
@@ -620,17 +620,16 @@ const process_network_operation = ({operation: change, ephemeral_data, main_data
       while((ephemeral_data.nodes[id_to_left]||[0])[0] > one_id) {
         const last_op = main_data.history.slice(-1)[0];
         op_buffer.push(last_op);
-        undo_operation({state_1: main_data, state_2: ephemeral_data, operation: last_op});
+        undo_one_operation({state_1: main_data, state_2: ephemeral_data});
       }
       const index = find_index_with_hint({array: main_data.current, index_hint, filter: ({id}) => (id === id_to_left)}) + 1;
-      process_change({operation: {type: 'add', text, index, one_id}, main_data, ephemeral_data});  // TODO: History will be handled improperly
-                                                                                                   // at this point.
+      execute_operation({operation: {type: 'add', text, index, one_id}, state_1: main_data, state_2: ephemeral_data});
       while(op_buffer.length > 0)
         execute_operation({state_1: main_data, state_2: ephemeral_data, operation: op_buffer.pop()});
     } else {
       const real_id_to_left = possibly_follow_tombstones({ephemeral_data, id: id_to_left});
       const index = find_index_with_hint({array: main_data.current, index_hint, filter: ({id}) => (id === real_id_to_left)}) + 1;
-      process_change({operation: {type: 'add', text, index, one_id}, main_data, ephemeral_data});
+      execute_operation({operation: {type: 'add', text, index, one_id}, state_1: main_data, state_2: ephemeral_data});
     }
   } else if(change.type === 'remove') {
     const {op_id, ids, text} = change;
@@ -654,7 +653,8 @@ const process_network_operation = ({operation: change, ephemeral_data, main_data
         partial_op_3 += c;
       } else {
         if(partial_op_1 !== undefined) {
-          process_change({operation:{type:'remove',index:partial_op_1,text:partial_op_3,op_id,one_id:partial_op_4},main_data,ephemeral_data});
+          execute_operation({operation: {type: 'remove', index: partial_op_1, text: partial_op_3, op_id, one_id: partial_op_4},
+                             state_1: main_data, state_2: ephemeral_data                                                       });
           if(index > partial_op_1)
             index -= partial_op_3.length;
         }
@@ -663,8 +663,10 @@ const process_network_operation = ({operation: change, ephemeral_data, main_data
         partial_op_4 = main_data.current[index].id;
       }
     });
-    if(partial_op_1 !== undefined)
-      process_change({operation:{type:'remove',index:partial_op_1,text:partial_op_3,op_id,one_id:partial_op_4},main_data,ephemeral_data});
+    if(partial_op_1 !== undefined) {
+      execute_operation({operation: {type: 'remove', index: partial_op_1, text: partial_op_3, op_id, one_id: partial_op_4},
+                         state_1: main_data, state_2: ephemeral_data                                                       });
+    }
   } else {
     throw 1234;
   }
@@ -687,63 +689,11 @@ const generate_network_operations = ({normalizeds, main_data}) => {
   });
 };
 
-//const process_change = ({ephemeral_data, main_data: data, change: {id_to_left, remove, add, clock}}) => {
-//  const index = data.current.findIndex((c) => (c.id === id_to_left)) + 1;
-//  const removed = data.current.slice(index, remove.length).map(({c}) => (c)).join('');
-//  const inserted = add.map(({c}) => (c)).join('');
-//  const now = Date.now();
-//  const device_id = clock % 2;
-//  const recent = data.history.slice(-1)[0];
-//  const maybe_mergeable = (
-//        (ephemeral_data.timestamp > now - 5000)
-//    &&  (ephemeral_data.device_id === device_id)
-//    &&  (recent.one_id !== undefined)
-//    &&  (clock === recent.one_id + 2 * recent.text.length)
-//  );
-//  const id_to_right = ((index+remove.length === data.current.length) ? 0 : data.current[index+remove.length].id);
-//  if(maybe_mergeable  &&  recent.type === 'remove'  &&  id_to_right === recent.id_to_right) {
-//    recent.text = removed + recent.text;
-//    if(inserted.length > 0)
-//      data.history.push({type: 'add', text: inserted, index, one_id: clock});
-//  } else if(maybe_mergeable  &&  recent.type === 'add'  &&  id_to_left === clock - 2) {
-//    recent.text += inserted;
-//    if(removed.length > 0)
-//      data.history.push({type: 'remove', text: removed, id_to_right, one_id: clock});
-//  } else {
-//    if(ephemeral_data.timestamp <= now - 5000) {
-//      data.history.push({type: 'timestamp', value: now});
-//      ephemeral_data.timestamp = now;
-//    }
-//    if(ephemeral_data.device_id !== device_id) {
-//      ephemeral_data.device_id = device_id;
-//    }
-//    if(removed.length > 0)
-//      data.history.push({type: 'remove', text: removed, id_to_right, clock});
-//    if(inserted.length > 0)
-//      data.history.push({type: 'add', text: inserted, id_to_left, clock});
-//  }
-//  for(let i=index; i<index+removed.length; ++i)
-//    ephemeral_data.tombstones[data.current[i].id] = id_to_left;
-//  const new_elements = [...inserted].map((c, i) => ({id: clock + 2*i, c}));
-//  data.current.splice(index, removed.length, ...new_elements);
-//  console.log(JSON.parse(JSON.stringify({data, ephemeral_data})));
-//  const replayed = replay(data.history);
-//  if(JSON.stringify(replayed.current) !== JSON.stringify(data.current))
-//    throw (console.error({data, replayed}), 1246);
-//  localStorage.setItem('main_text_box_history', JSON.stringify(data.history));
-//};
-
-const process_change = ({ephemeral_data, main_data, operation}) => {
-  console.log('process_change', JSON.parse(JSON.stringify({main_data, ephemeral_data, operation})));
-  execute_operation({state_1: main_data, state_2: ephemeral_data, operation});
-  main_data.history.push(operation);
-
-  console.log('process change 2', JSON.parse(JSON.stringify({main_data, ephemeral_data})));
-
+const save_to_disk = ({main_data, ephemeral_data}) => {
   // Sanity check:
-  const {state_1, state_2} = replay(main_data.history);
-  if(make_stable_string({state_1, state_2}) !== make_stable_string({state_1: {current: main_data.current}, state_2: ephemeral_data}))
-    throw (console.error({real: {main_data, ephemeral_data}, replayed: {state_1, state_2}}), 1235);
+  const replayed = replay(main_data.history);
+  if(make_stable_string(replayed) !== make_stable_string({state_1: main_data, state_2: ephemeral_data}))
+    throw (console.error({real: {main_data, ephemeral_data}, replayed}), 1235);
 
   localStorage.setItem('main_text_box_history', JSON.stringify(main_data.history));
 };
@@ -859,7 +809,8 @@ const main = async() => {
       const normalizeds = normalize_dom_change({main_data, change, ephemeral_data, self_device_id});
       for(const operation of normalizeds) {
         to_be_sent.push(...generate_network_operations({normalizeds: [operation], main_data}));
-        process_change({ephemeral_data, main_data, operation});
+        execute_operation({state_2: ephemeral_data, state_1: main_data, operation});
+        save_to_disk({main_data, ephemeral_data});
       }
     },
 
