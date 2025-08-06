@@ -471,10 +471,9 @@ const get_self_device_id = async({master_public_key, partner_key}) => {
 
 const execute_operation = ({state_1, state_2, operation: op}) => {
   if(op.type === 'add') {
-    const {index, text, one_id} = op;
+    const {index, text, one_id, id_to_left} = op;
     state_2.clock = Math.max(state_2.clock, one_id + 2*(text.length-1));
     const new_elements = [...text].map((c, i) => ({id: (one_id + 2 * i), c}));
-    const id_to_left = ((index === 0) ? 0 : state_1.current[index-1].id);
     push_child({ephemeral_data: state_2, parent_id: id_to_left, child_id: one_id});
     state_1.current.splice(index, 0, ...new_elements);
   } else if(op.type === 'remove') {
@@ -558,10 +557,16 @@ const normalize_dom_change = ({main_data, change, ephemeral_data, self_device_id
   let next_clock = (ephemeral_data.clock & -2) + 2 + self_device_id;
   if(typeof next_clock !== 'number' || next_clock !== next_clock)
     console.error({next_clock});
-  if(removed !== '')
-    result.push({type: 'remove', text: removed, op_id: (next_clock += 2) - 2, index});
-  if(inserted !== '')
-    result.push({type: 'add', text: inserted, index, one_id: next_clock});
+  if(removed !== '') {
+    for(let i=0; i<removed.length; ++i) {
+      const id = main_data.current[index + i].id;
+      result.push({type: 'remove', text: removed[i], op_id: (next_clock += 2) - 2, index: index + i, one_id: id});
+    }
+  }
+  if(inserted !== '') {
+    const id_to_left = ((index === 0) ? 0 : main_data.current[index - 1].id);
+    result.push({type: 'add', text: inserted, index, one_id: next_clock, id_to_left});
+  }
   return result;
 };
 
@@ -623,13 +628,13 @@ const execute_network_operation = ({operation: change, ephemeral_data, main_data
         undo_one_operation({state_1: main_data, state_2: ephemeral_data});
       }
       const index = find_index_with_hint({array: main_data.current, index_hint, filter: ({id}) => (id === id_to_left)}) + 1;
-      execute_operation({operation: {type: 'add', text, index, one_id}, state_1: main_data, state_2: ephemeral_data});
+      execute_operation({operation: {type: 'add', text, index, one_id, id_to_left}, state_1: main_data, state_2: ephemeral_data});
       while(op_buffer.length > 0)
         execute_operation({state_1: main_data, state_2: ephemeral_data, operation: op_buffer.pop()});
     } else {
       const real_id_to_left = possibly_follow_tombstones({ephemeral_data, id: id_to_left});
       const index = find_index_with_hint({array: main_data.current, index_hint, filter: ({id}) => (id === real_id_to_left)}) + 1;
-      execute_operation({operation: {type: 'add', text, index, one_id}, state_1: main_data, state_2: ephemeral_data});
+      execute_operation({operation: {type: 'add', text, index, one_id, id_to_left}, state_1: main_data, state_2: ephemeral_data});
     }
   } else if(change.type === 'remove') {
     const {op_id, ids, text} = change;
@@ -675,8 +680,7 @@ const execute_network_operation = ({operation: change, ephemeral_data, main_data
 const generate_network_operations = ({normalizeds, main_data}) => {
   return normalizeds.map((nor_op) => {
     if(nor_op.type === 'add') {
-      const {text, index, one_id} = nor_op;
-      const id_to_left = ((index === 0) ? 0 : main_data.current[index - 1].id);
+      const {text, index, one_id, id_to_left} = nor_op;
       console.log({nor_op, id_to_left, text, index, one_id});
       return {type: 'add', id_to_left, text, index_hint: index, one_id};
     } else if(nor_op.type === 'remove') {
