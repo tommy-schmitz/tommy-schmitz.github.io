@@ -473,12 +473,12 @@ const execute_operation = ({state_1, state_2, operation: op}) => {
     const {index, text, one_id} = op;
     state_2.clock = Math.max(state_2.clock, one_id + 2*(text.length-1));
     const new_elements = [...text].map((c, i) => ({id: (one_id + 2 * i), c}));
-    const id_to_left = ((index === 0) ? 0 : state_1.current[index-1]);
+    const id_to_left = ((index === 0) ? 0 : state_1.current[index-1].id);
     push_child({ephemeral_data: state_2, parent_id: id_to_left, child_id: one_id});
     state_1.current.splice(index, 0, ...new_elements);
   } else if(op.type === 'remove') {
     const {index, text, op_id} = op;
-    state_2.clock = Math.max(state_2.clock, op_id + 2*(text.length-1));
+    state_2.clock = Math.max(state_2.clock, op_id);
     const id_to_left = ((index === 0) ? 0 : state_1.current[index-1].id);
     for(let i=0; i<op.text.length; ++i)
       state_2.tombstones[state_1.current[index+i].id] = {id_to_left, deletion_id: op_id};
@@ -605,7 +605,7 @@ const find_index_with_hint = ({array, index_hint, filter}) => {
   return -1;
 };
 
-const execute_network_operation = ({operation: change, ephemeral_data, main_data}) => {
+const process_network_operation = ({operation: change, ephemeral_data, main_data}) => {
 //      const normalizeds = normalize_network_change({change: sanitized_change, ephemeral_data, main_data: data});
 //      for(const operation of normalizeds)
 //        process_change({ephemeral_data, main_data: data, operation});
@@ -621,7 +621,7 @@ const execute_network_operation = ({operation: change, ephemeral_data, main_data
 
     // To fix problem, undo operations here, until higher rank conflicting operations are gone.
 
-    execute_operation({operation: {type: 'add', text, index, one_id}, state_1: main_data, state_2: ephemeral_data});
+    process_change({operation: {type: 'add', text, index, one_id}, main_data, ephemeral_data});
 
     // Now replay all the operations that we undid.
   } else if(change.type === 'remove') {
@@ -630,6 +630,7 @@ const execute_network_operation = ({operation: change, ephemeral_data, main_data
     let partial_op_1 = undefined;
     let partial_op_2 = undefined;
     let partial_op_3 = '';
+    let partial_op_4 = undefined;
     ids.forEach((id_to_delete, i) => {
       const c = text[i];
       if(ephemeral_data.tombstones[id_to_delete])
@@ -640,21 +641,22 @@ const execute_network_operation = ({operation: change, ephemeral_data, main_data
         throw 1236;
       }
       index_hint = index + 1;
-      if(index === partial_op_2 + 1) {
+      if(index === partial_op_2 + 1  &&  main_data.current[index].id === (partial_op_4 + 2 * (index - partial_op_1))) {
         partial_op_2 = index;
         partial_op_3 += c;
       } else {
         if(partial_op_1 !== undefined) {
-          main_data.current.splice(partial_op_1, partial_op_3.length);
+          process_change({operation:{type:'remove',index:partial_op_1,text:partial_op_3,op_id,one_id:partial_op_4},main_data,ephemeral_data});
           if(index > partial_op_1)
             index -= partial_op_3.length;
         }
         partial_op_1 = partial_op_2 = index;
         partial_op_3 = c;
+        partial_op_4 = main_data.current[index].id;
       }
     });
     if(partial_op_1 !== undefined)
-      main_data.current.splice(partial_op_1, partial_op_3.length);
+      process_change({operation:{type:'remove',index:partial_op_1,text:partial_op_3,op_id,one_id:partial_op_4},main_data,ephemeral_data});
   } else {
     throw 1234;
   }
@@ -723,10 +725,12 @@ const generate_network_operations = ({normalizeds, main_data}) => {
 //  localStorage.setItem('main_text_box_history', JSON.stringify(data.history));
 //};
 
-const process_change = ({ephemeral_data, main_data, execute}) => {
-  console.log('process_change', operation);
-  execute();
+const process_change = ({ephemeral_data, main_data, operation}) => {
+  console.log('process_change', JSON.parse(JSON.stringify({main_data, ephemeral_data, operation})));
+  execute_operation({state_1: main_data, state_2: ephemeral_data, operation});
   main_data.history.push(operation);
+
+  console.log('process change 2', JSON.parse(JSON.stringify({main_data, ephemeral_data})));
 
   // Sanity check:
   const {state_1, state_2} = replay(main_data.history);
@@ -734,14 +738,6 @@ const process_change = ({ephemeral_data, main_data, execute}) => {
     throw (console.error({real: {main_data, ephemeral_data}, replayed: {state_1, state_2}}), 1235);
 
   localStorage.setItem('main_text_box_history', JSON.stringify(main_data.history));
-};
-
-const process_network_operation = ({ephemeral_data, main_data, operation}) => {
-  process_change({main_data, ephemeral_data, execute: () => {execute_network_operation({main_data, ephemeral_data, operation});}});
-};
-
-const process_local_operation = () => {
-  process_change({main_data, ephemeral_data, execute: () => {execute_operation({state_1: main_data, state_2: ephemeral_data, operation});}});
 };
 
 const get_latest_id = ({history, self_device_id}) => {
@@ -775,6 +771,7 @@ const compute_initial_text = async({send_encrypted_data, self_device_id, interlo
   data.history.splice(0, data.history.length, ...stored_history);
   data.current.splice(0, data.current.length, ...replayed.state_1.current);
   Object.assign(ephemeral_data.tombstones, replayed.state_2.tombstones);
+  Object.assign(ephemeral_data.nodes, replayed.state_2.nodes);
   ephemeral_data.timestamp = replayed.state_2.timestamp;
   ephemeral_data.clock = replayed.state_2.clock;
   return data.current.map(({c}) => (c)).join('');
@@ -854,7 +851,7 @@ const main = async() => {
       const normalizeds = normalize_dom_change({main_data, change, ephemeral_data, self_device_id});
       for(const operation of normalizeds) {
         to_be_sent.push(...generate_network_operations({normalizeds: [operation], main_data}));
-        process_local_operation({ephemeral_data, main_data, operation});
+        process_change({ephemeral_data, main_data, operation});
       }
     },
 
