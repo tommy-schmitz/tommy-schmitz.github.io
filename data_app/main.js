@@ -437,10 +437,12 @@ const handle_network_operations = (() => {
     }
     send_encrypted_data({type: 'ack', value: highest_ack_sent});  // asynchronous action
     set_textarea_value(data.current.map(({c}) => (c)).join(''));
+    const new_id_left_of_selection_start = possibly_follow_tombstones({ephemeral_data, id: id_left_of_selection_start});
     textarea.selectionStart = find_index_with_hint({array: data.current, index_hint: prev_selection_start,
-                                                    filter: ({id}) => (id === id_left_of_selection_start)}) + 1;
+                                                    filter: ({id}) => (id === new_id_left_of_selection_start)}) + 1;
+    const new_id_left_of_selection_end   = possibly_follow_tombstones({ephemeral_data, id: id_left_of_selection_end  });
     textarea.selectionEnd   = find_index_with_hint({array: data.current, index_hint: prev_selection_end  ,
-                                                    filter: ({id}) => (id === id_left_of_selection_end  )}) + 1;
+                                                    filter: ({id}) => (id === new_id_left_of_selection_end  )}) + 1;
   };
 })();
 
