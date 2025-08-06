@@ -750,53 +750,7 @@ const spawn_animation_frame_loop = (callback) => {
   requestAnimationFrame(f);
 };
 
-const main = async() => {
-  const socket_io = await initialize_socket_io();
-
-  const ui = await initialize_ui();
-
-  const interlocutor_latest_history = make_resolvable_promise();
-  const done_processing_latest_history = make_resolvable_promise();
-
-  const {send_encrypted_data, self_device_id} = await get_encrypted_channel({
-    ui,
-    socket_io,
-    interlocutor_latest_history,
-    handle_decrypted_message: ({message: parsed}) => {
-      if(parsed.type === 'changes') {
-        handle_network_operations({changes: parsed.value, send_encrypted_data, textarea, main_data, self_device_id, set_textarea_value, ephemeral_data});
-      } else if(parsed.type === 'ack') {
-        handle_ack({to_be_sent, ack: parsed.value});
-      } else if(parsed.type === 'latest clock') {
-        interlocutor_latest_history.resolve(parsed.value);
-      } else if(parsed.type === 'latest history') {
-        handle_network_operations({changes: parsed.value, send_encrypted_data, textarea, main_data, self_device_id, set_textarea_value, ephemeral_data});
-        done_processing_latest_history.resolve();
-      } else {
-        console.warn('Unrecognized message type (2):', parsed.type);
-      }
-    },
-  });
-
-  console.log({self_device_id});
-
-  const to_be_sent = [];
-  (async() => {
-    while(true) {
-      console.log('syncing');
-      if(to_be_sent.length > 0)
-        await send_encrypted_data({type: 'changes', value: to_be_sent});
-      await sleep(7000);
-    }
-  })();
-
-  let ephemeral_data = {timestamp: 0, tombstones: {}, clock: 0, nodes: {}};
-  let main_data = {current: [], history: []};
-
-  const initial_text = await compute_initial_text({send_encrypted_data, self_device_id, interlocutor_latest_history, main_data, ephemeral_data});
-
-  console.log({initial_text});
-
+const make_feedback_div = () => {
   let feedback_opacity_timer = 0;
   const feedback_div = document.createElement('div');
   spawn_animation_frame_loop((elapsed) => {
@@ -807,6 +761,67 @@ const main = async() => {
     feedback_div.innerText = message;
     feedback_opacity_timer = 10000;
   };
+  return {set_feedback_message, feedback_div};
+};
+
+const initialize_network_manager = ({send_encrypted_data}) => {
+  const to_be_sent = [];
+  (async() => {
+    while(true) {
+      console.log('syncing');
+      if(to_be_sent.length > 0)
+        await send_encrypted_data({type: 'changes', value: to_be_sent});
+      await sleep(7000);
+    }
+  })();
+  return {network_buffer: to_be_sent};
+};
+
+const main = async() => {
+  const socket_io = await initialize_socket_io();
+
+  const ui = await initialize_ui();
+
+  const interlocutor_latest_history = make_resolvable_promise();
+  const done_processing_latest_history = make_resolvable_promise();
+
+  const handle_network_operations_ = (changes) => {
+    handle_network_operations({changes, send_encrypted_data, textarea, main_data, self_device_id, set_textarea_value, ephemeral_data});
+  };
+
+  const {send_encrypted_data, self_device_id} = await get_encrypted_channel({
+    ui,
+    socket_io,
+    interlocutor_latest_history,
+    handle_decrypted_message: ({message: parsed}) => {
+      if(parsed.type === 'changes') {
+        handle_network_operations_(parsed.value);
+      } else if(parsed.type === 'ack') {
+        handle_ack({to_be_sent, ack: parsed.value});
+      } else if(parsed.type === 'latest clock') {
+        interlocutor_latest_history.resolve(parsed.value);
+      } else if(parsed.type === 'latest history') {
+        handle_network_operations_(parsed.value);
+        done_processing_latest_history.resolve();
+      } else {
+        console.warn('Unrecognized message type (2):', parsed.type);
+      }
+    },
+  });
+
+  console.log({self_device_id});
+
+  const to_be_sent = [];
+  const {network_buffer: to_be_sent} = initialize_network_manager({send_encrypted_data});
+
+  let ephemeral_data = {timestamp: 0, tombstones: {}, clock: 0, nodes: {}};
+  let main_data = {current: [], history: []};
+
+  const initial_text = await compute_initial_text({send_encrypted_data, self_device_id, interlocutor_latest_history, main_data, ephemeral_data});
+
+  console.log({initial_text});
+
+  const {set_feedback_message, feedback_div} = make_feedback_div();
 
   const {textarea, set_value: set_textarea_value} = make_textarea({
     on_change: (change) => {
