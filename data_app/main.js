@@ -474,7 +474,7 @@ const execute_operation = ({state_1, state_2, operation: op}) => {
     const {index, text, one_id, id_to_left} = op;
     state_2.clock = Math.max(state_2.clock, one_id + 2*(text.length-1));
     const new_elements = [...text].map((c, i) => ({id: (one_id + 2 * i), c}));
-    add_child({ephemeral_data: state_2, parent_id: id_to_left, child_id: one_id});
+    push_child({ephemeral_data: state_2, parent_id: id_to_left, child_id: one_id});
     state_1.current.splice(index, 0, ...new_elements);
   } else if(op.type === 'remove') {
     const {index, text, op_id} = op;
@@ -491,14 +491,18 @@ const execute_operation = ({state_1, state_2, operation: op}) => {
   state_1.history.push(op);
 };
 
-const add_child = ({ephemeral_data, parent_id, child_id}) => {
-  ephemeral_data.nodes[parent_id].children.unshift(child_id);
+const push_child = ({ephemeral_data, parent_id, child_id}) => {
+  if(ephemeral_data.nodes[parent_id] === undefined)
+    ephemeral_data.nodes[parent_id] = [];
+  ephemeral_data.nodes[parent_id].unshift(child_id);
 };
 
-const remove_child = ({ephemeral_data, parent_id, child_id}) => {
-  const children = ephemeral_data.nodes[parent_id].children;
+const delete_child = ({ephemeral_data, parent_id, child_id}) => {
+  const children = ephemeral_data.nodes[parent_id];
   if(children[0] !== child_id) {
     throw 1248;
+  } else if(children.length === 1) {
+    delete ephemeral_data.nodes[parent_id];
   } else {
     children.shift();
   }
@@ -511,7 +515,7 @@ const undo_one_operation = ({state_1, state_2}) => {
     const {index, text, one_id} = op;
     state_1.current.splice(index, text.length);
     const id_to_left = ((index === 0) ? 0 : state_1.current[index-1].id);
-    remove_child({ephemeral_data: state_2, parent_id: id_to_left, child_id: one_id});
+    delete_child({ephemeral_data: state_2, parent_id: id_to_left, child_id: one_id});
   } else if(op.type === 'remove') {
     const {index, text, one_id, op_id} = op;
     const new_elements = [...text].map((c, i) => ({id: (one_id + 2 * i), c}));
@@ -614,11 +618,11 @@ const execute_network_operation = ({operation: change, ephemeral_data, main_data
   if(change.type === 'add') {
     const {one_id, id_to_left, text, index_hint} = change;
 
-    const children = ephemeral_data.nodes[id_to_left].children;
+    const children = ephemeral_data.nodes[id_to_left] || [0];
 
     if(children[0] > one_id) {
       const op_buffer = [];
-      while(ephemeral_data.nodes[id_to_left].children[0] > one_id) {
+      while((ephemeral_data.nodes[id_to_left]||[0])[0] > one_id) {
         const last_op = main_data.history.slice(-1)[0];
         op_buffer.push(last_op);
         undo_one_operation({state_1: main_data, state_2: ephemeral_data});
