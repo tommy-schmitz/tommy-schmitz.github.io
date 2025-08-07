@@ -462,13 +462,13 @@ const handle_network_operations = (() => {
     for(const untrusted_change of filter_changes({changes, highest_ack_sent})) {
       const sanitized_change = sanitize_change({untrusted_change, self_device_id});
       data.history.push(sanitized_change);
-      sort_history(data.history);
-      const replayed = replay(data.history);
-      save_replay({replayed, main_data: data, ephemeral_data});
-      save_to_disk({main_data: data, ephemeral_data});
       highest_ack_sent = Math.max(highest_ack_sent, get_highest_op_id(sanitized_change));
     }
     send_encrypted_data({type: 'ack', value: highest_ack_sent});  // asynchronous action
+    sort_history(data.history);
+    const replayed = replay(data.history);
+    save_replay({replayed, main_data: data, ephemeral_data});
+    save_to_disk({main_data: data, ephemeral_data});
     set_textarea_value(data.current.map(({c}) => (c)).join(''));
     const new_id_left_of_selection_start = possibly_follow_tombstones({main_data: data, id: id_left_of_selection_start});
     textarea.selectionStart = find_index_with_hint({array: data.current, index_hint: prev_selection_start,
@@ -578,10 +578,11 @@ const find_index_with_hint = ({array, index_hint, filter}) => {
 };
 
 const save_to_disk = ({main_data, ephemeral_data}) => {
-  // Sanity check:
-  const replayed = replay(main_data.history);
-  if(make_stable_string(replayed) !== make_stable_string({state_1: main_data, state_2: ephemeral_data}))
-    throw (console.error({real: {main_data, ephemeral_data}, replayed}), 1235);
+  // Sadly, the following sanity check is mostly pointless, since the main and ephemeral data structures are generated directly from replay().
+//  // Sanity check:
+//  const replayed = replay(main_data.history);
+//  if(make_stable_string(replayed) !== make_stable_string({state_1: main_data, state_2: ephemeral_data}))
+//    throw (console.error({real: {main_data, ephemeral_data}, replayed}), 1235);
 
   localStorage.setItem('main_text_box_history', JSON.stringify(main_data.history));
 };
@@ -717,11 +718,11 @@ const main = async() => {
       for(const operation of normalizeds) {
         to_be_sent.push(operation);
         main_data.history.push(operation);
-        sort_history(main_data.history);
-        const replayed = replay(main_data.history);
-        save_replay({replayed, main_data, ephemeral_data});
-        save_to_disk({main_data, ephemeral_data});
       }
+      sort_history(main_data.history);
+      const replayed = replay(main_data.history);
+      save_replay({replayed, main_data, ephemeral_data});
+      save_to_disk({main_data, ephemeral_data});
     },
 
     // TODO: implement proper undo and redo in this portion of the code
