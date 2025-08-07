@@ -291,6 +291,8 @@ const decrypt = async(symmetric_key, cipher) => {
 };
 
 const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: listener = null, interlocutor_latest_history}) => {
+  ui.main_page_body.innerText = 'Connecting to server ...';
+
   const sock = socket_io(RELAY_SERVER_URL);
   sock.on('disconnect', () => {
     console.log('Disconnected.');
