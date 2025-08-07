@@ -386,14 +386,15 @@ const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: li
 };
 
 const sanitize_change = ({untrusted_change, self_device_id}) => {
+  const timestamp = Date.now();
   if(untrusted_change.type === 'add') {
     const clock = untrusted_change.id;
     const new_clock = (clock & -2) + (1 - self_device_id);
-    return {...untrusted_change, id: new_clock};
+    return {...untrusted_change, id: new_clock, timestamp};
   } else if(untrusted_change.type === 'remove') {
     const clock = untrusted_change.id;
     const new_clock = (clock & -2) + (1 - self_device_id);
-    return {...untrusted_change, id: new_clock};
+    return {...untrusted_change, id: new_clock, timestamp};
   } else {
     throw 1241;
   }
@@ -537,6 +538,7 @@ const replay = (history) => {
 };
 
 const normalize_dom_change = ({main_data, change, ephemeral_data, self_device_id}) => {
+  const timestamp = Date.now();
   const params = JSON.parse(JSON.stringify({main_data, change, ephemeral_data, self_device_id}));
   const result = [];
   const {prev_value, removed, inserted, index, new_value} = change;
@@ -545,11 +547,11 @@ const normalize_dom_change = ({main_data, change, ephemeral_data, self_device_id
     console.error({next_clock});
   for(let i=0; i<removed.length; ++i) {
     const deleted_id = main_data.current[index + i].id;
-    result.push({type: 'remove', text: removed[i], id: (next_clock += 2) - 2, deleted_id});
+    result.push({type: 'remove', text: removed[i], id: (next_clock += 2) - 2, deleted_id, timestamp});
   }
   for(let i=0; i<inserted.length; ++i) {
     const id_to_left = ((i === 0) ? ((index === 0) ? 0 : main_data.current[index - 1].id) : next_clock - 2);
-    result.push({type: 'add', text: inserted[i], id: (next_clock += 2) - 2, id_to_left});
+    result.push({type: 'add', text: inserted[i], id: (next_clock += 2) - 2, id_to_left, timestamp});
   }
   console.log('normalize_dom', {...params, result});
   return result;
@@ -585,12 +587,213 @@ const find_index_with_hint = ({array, index_hint, filter}) => {
   return -1;
 };
 
+const compare = (a, b) => {
+  if(a < b)
+    return -1;
+  if(b < a)
+    return 1;
+  return 0;
+};
+
+const round_down_to_nearest = (x, y) => {
+  return x - (x % y);
+};
+
+const serialize_as_varnum = (m) => {
+  if(m !== (m-(m%1))) {
+    console.log(1245, m);
+    throw 1245;
+  }
+
+  const n = Math.abs(m);
+
+  const sign_bit = ((n === m) ? 0 : 128);
+
+  if(n < 64)
+    return [sign_bit + n];
+
+  if(n < 8192)
+    return [sign_bit + 64 + ((n&(127<<7))>>7)  , n&127];
+
+  if(n < 1048576)
+    return [sign_bit + 64 + ((n&(127<<14))>>14), 128 + ((n&(127<<7))>>7)  , n&127];
+
+  if(n < 134217728)
+    return [sign_bit + 64 + ((n&(127<<21))>>21), 128 + ((n&(127<<14))>>14), 128 + ((n>>7)&127), n&127];
+
+  console.error('serialize_as_varnum(', m);
+
+  throw 1246;
+};
+
+const deserialize_varnum = (array, index) => {
+  const sign = (((array[index] & 128) === 0) ? 1 : -1);
+
+  let n = 0;
+
+  if(index >= array.length)
+    throw 1247;
+
+  if((array[index] & 127) < 64)
+    return [sign * (array[index] & 127), 1];
+
+  if(index+1 >= array.length)
+    throw 1247;
+
+  if(array[index + 1] < 128)
+    return [sign * (((array[index]&63)<<7) | array[index+1]), 2];
+
+  if(index+2 >= array.length)
+    throw 1247;
+
+  if(array[index + 2] < 128)
+    return [sign * (((array[index]&63)<<14) | ((array[index+1]&128)<<7) | array[index+2]), 3];
+
+  if(index+3 >= array.length)
+    throw 1247;
+
+  return [sign * (((array[index]&63)<<21) | ((array[index+1]&128)<<14) | ((array[index+2]&128)<<7) | array[index+3]), 4];
+};
+
+const serialize = (history) => {
+  const sorted_history = [...history].sort((a, b) => {
+    const t1 = round_down_to_nearest(a.timestamp, 5000);
+    const t2 = round_down_to_nearest(b.timestamp, 5000);
+    if(t1 !== t2) {
+      return compare(t1, t2);
+    } else {
+      return compare(a.id, b.id);
+    }
+  });
+  let time = 0;
+  let baseline = 0;
+  const array = [];
+  for(const item of sorted_history) {
+    // Serialize timestamp:
+    const time_increase = round_down_to_nearest(item.timestamp - time, 5000);
+    console.log('MM', time_increase);
+    if(time_increase > 647500) {
+      const n = (time_increase / 5000) - 130;
+      array.push('t'.charCodeAt(0), (n>>24)&255, (n>>16)&255, (n>>8)&255, n&255);
+    } else if(time_increase >= 7500) {
+      const n = (time_increase / 5000) + 126;
+      array.push('t'.charCodeAt(0), n);
+    } else if(time_increase === 5000) {
+      array.push('T'.charCodeAt(0));
+    } else {
+      // Do nothing
+    }
+    time += time_increase;
+
+    if(item.type === 'add') {
+      const {id_to_left, id, text} = item;
+      array.push('a'.charCodeAt(0));
+      array.push(...serialize_as_varnum(id - baseline));
+      array.push(...serialize_as_varnum(id_to_left - baseline));
+      array.push(text.charCodeAt(0));
+      baseline = id;
+    } else if(item.type === 'remove') {
+      const {deleted_id, id, text} = item;
+      array.push('r'.charCodeAt(0));
+      array.push(...serialize_as_varnum(id - baseline));
+      array.push(...serialize_as_varnum(deleted_id - baseline));
+      array.push(text.charCodeAt(0));
+      baseline = id;
+    } else {
+      throw 1244;
+    }
+  }
+  return encode_binary(array);
+};
+
+const deserialize = (str) => {
+  const array = decode_binary(str);
+  let time = 0;
+  let baseline = 0;
+  const history = [];
+  let index = 0;
+  while(index<array.length) {
+    const old_index = index;
+    let erroring = false;
+    try {
+      if(array[index] === 't'.charCodeAt(0)) {
+        if((array[index+1] & 128) === 0) {
+          time += 650000 + (((array[index+1]<<24) | (array[index+2]<<16) | (array[index+3]<<8) | array[index+4]) * 5000);
+          index += 5;
+        } else {
+          time += 10000 + ((array[index+1]&127) * 5000);
+          index += 2;
+        }
+      } else if(array[index] === 'T'.charCodeAt(0)) {
+        time += 5000;
+        index += 1;
+      } else if(array[index] === 'a'.charCodeAt(0)) {
+        const [v1, len_1] = deserialize_varnum(array, index + 1);
+        const [v2, len_2] = deserialize_varnum(array, index + 1 + len_1);
+        const id = baseline + v1;
+        const id_to_left = baseline + v2;
+        const text = String.fromCharCode(array[index + 1 + len_1 + len_2]);
+        history.push({type: 'add', id, id_to_left, text, timestamp: time});
+        baseline = id;
+        index += 1 + len_1 + len_2 + 1;
+      } else if(array[index] === 'r'.charCodeAt(0)) {
+        const [v1, len_1] = deserialize_varnum(array, index + 1);
+        const [v2, len_2] = deserialize_varnum(array, index + 1 + len_1);
+        const id = baseline + v1;
+        const deleted_id = baseline + v2;
+        const text = String.fromCharCode(array[index + 1 + len_1 + len_2]);
+        history.push({type: 'remove', id, deleted_id, text, timestamp: time});
+        baseline = id;
+        index += 1 + len_1 + len_2 + 1;
+      } else {
+        console.log(1249, {array, history, index, byte: array[index]});
+        throw 1249;
+      }
+    } catch(e) {
+      erroring = true;
+      throw e;
+    } finally {
+      if(!erroring  &&  (index === old_index))
+        throw 1250;
+    }
+  }
+  if(index !== array.length)
+    throw 1251;
+  return sort_history(history);
+};
+
 const save_to_disk = ({main_data, ephemeral_data}) => {
   // Sadly, the following sanity check is mostly pointless, since the main and ephemeral data structures are generated directly from replay().
 //  // Sanity check:
 //  const replayed = replay(main_data.history);
 //  if(make_stable_string(replayed) !== make_stable_string({state_1: main_data, state_2: ephemeral_data}))
 //    throw (console.error({real: {main_data, ephemeral_data}, replayed}), 1235);
+
+  const serialized = serialize(main_data.history);
+
+  console.log({serialized});
+
+  // Fails because timestamps become less precise:
+//  // Sanity check:
+//  if(make_stable_string(deserialize(serialized)) !== make_stable_string(main_data.history));
+//    throw 1248;
+
+  // Sanity check:
+  const replayed_1 = replay(deserialize(serialized));
+  const replayed_2 = replay(main_data.history);
+  replayed_1.state_1.history = replayed_2.state_1.history = null;
+  if(make_stable_string(replayed_1) !== make_stable_string(replayed_2)) {
+    console.log(1253, {replayed_1, replayed_2});
+    throw 1253;
+  }
+
+  // Sanity check:
+  const deserialized = deserialize(serialized);
+  const again = serialize(deserialized);
+  if(again !== serialized) {
+    console.log(1252, {serialized, again_____: again, deserialized});
+    throw 1252;
+  }
 
   localStorage.setItem('main_text_box_history', JSON.stringify(main_data.history));
 };
@@ -674,7 +877,28 @@ const initialize_network_manager = ({send_encrypted_data}) => {
   return {network_buffer: to_be_sent};
 };
 
+const test_1 = () => {
+  const h_1 = [{type: 'add', id: 1, id_to_left: 0, text: 'X'}, {type: 'add', id: 2, id_to_left: 0, text: 'Y'}];
+  const h_2 = [h_1[1], h_1[0]];
+
+  const r_1 = replay(h_1);
+  const r_2 = replay(h_2);
+
+  console.log({r_1, r_2});
+
+  if(make_stable_string(r_1) !== make_stable_string(r_2))
+    throw 'failed';
+};
+
+const run_tests = () => {
+  console.log('Running tests ...');
+  test_1();
+  console.log('Ran tests.');
+};
+
 const main = async() => {
+//  run_tests();
+
   const socket_io = await initialize_socket_io();
 
   const ui = await initialize_ui();
