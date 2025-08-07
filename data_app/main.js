@@ -392,7 +392,7 @@ const sanitize_change = ({untrusted_change, self_device_id}) => {
 };
 
 const filter_network_operations = ({network_operations, seen_id, self_device_id}) => {
-  return network_operations.filter(({id}) => (id > seen_id));
+  return network_operations.filter(({id}) => (id % 2 === self_device_id  &&  id > seen_id));
 };
 
 const filter_changes = ({changes, highest_ack_sent}) => {
@@ -587,22 +587,24 @@ const save_to_disk = ({main_data, ephemeral_data}) => {
 };
 
 const get_latest_id = ({history, self_device_id}) => {
+  let result = 0;
   for(let i=history.length-1; i>=0; --i) {
     const item = history[i];
     if(item.type === 'add') {
       const device_id = item.id % 2;
       if(device_id === self_device_id)
         continue;
-      return item.id;
+      result = Math.max(result, item.id);
     } else if(item.type === 'remove') {
       const device_id = item.id % 2;
       if(device_id === self_device_id)
         continue;
-      return item.id;
+      result = Math.max(result, item.id);
     } else {
       continue;
     }
   }
+  return result;
 };
 
 const save_replay = ({replayed, main_data: data, ephemeral_data}) => {
