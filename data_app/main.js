@@ -541,7 +541,7 @@ const normalize_dom_change = ({main_data, change, ephemeral_data, self_device_id
   }
   for(let i=0; i<inserted.length; ++i) {
     const id_to_left = ((i === 0) ? ((index === 0) ? 0 : main_data.current[index - 1].id) : next_clock - 2);
-    result.push({type: 'add', text: inserted, id: (next_clock += 2) - 2, id_to_left});
+    result.push({type: 'add', text: inserted[i], id: (next_clock += 2) - 2, id_to_left});
   }
   console.log('normalize_dom', {...params, result});
   return result;
