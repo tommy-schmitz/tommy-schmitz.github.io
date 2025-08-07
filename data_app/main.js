@@ -413,6 +413,55 @@ const get_highest_op_id = (item) => {
   return item.id;
 };
 
+const sort_history = (history) => {
+  const finished = {};
+  const in_progress = {};
+  const graph = {};
+  const result = [];
+  const lookup_table = {};
+
+  for(const entry of history) {
+    lookup_table[entry.id] = entry;
+    if(entry.type === 'add') {
+      graph[entry.id_to_left] = graph[entry.id_to_left] || [];
+      graph[entry.id_to_left].push(entry.id);
+    } else if(entry.type === 'remove') {
+      graph[entry.deleted_id] = graph[entry.deleted_id] || [];
+      graph[entry.deleted_id].push(entry.id);
+    } else {
+      throw 1242;
+    }
+  }
+
+  const dfs = (id) => {
+    if(in_progress[id])
+      throw 1243;
+
+    if(finished[id])
+      return;
+
+    in_progress[id] = 1;
+
+    if(id !== 0)
+      result.push(lookup_table[id]);
+
+    graph[id]?.sort((a, b) => (b - a));
+    for(const child of (graph[id] || []))
+      dfs(child);
+
+    delete in_progress[id];
+    finished[id] = 1;
+  };
+
+  dfs(0);
+
+  history.splice(0, history.length, ...result);
+
+  console.log('tommy', history);
+
+  return history;
+};
+
 const handle_network_operations = (() => {
   let highest_ack_sent = 0;
 
@@ -421,25 +470,41 @@ const handle_network_operations = (() => {
     const prev_selection_end   = textarea.selectionEnd;
     const id_left_of_selection_start = ((textarea.selectionStart === 0) ? 0 : data.current[textarea.selectionStart - 1].id);
     const id_left_of_selection_end   = ((textarea.selectionEnd   === 0) ? 0 : data.current[textarea.selectionEnd   - 1].id);
+    console.log('ymmot5', JSON.parse(JSON.stringify({main_data: data})));
     for(const untrusted_change of filter_changes({changes, highest_ack_sent})) {
       const sanitized_change = sanitize_change({untrusted_change, self_device_id});
       data.history.push(sanitized_change);
+      sort_history(data.history);
+      const replayed = replay(data.history);
+      save_replay({replayed, main_data: data, ephemeral_data});
+      console.log('ymmot4', JSON.parse(JSON.stringify({main_data: data})));
       save_to_disk({main_data: data, ephemeral_data});
       highest_ack_sent = Math.max(highest_ack_sent, get_highest_op_id(sanitized_change));
     }
     send_encrypted_data({type: 'ack', value: highest_ack_sent});  // asynchronous action
-    data.history.sort();
-    const replayed = replay(data.history);
-    save_replay({replayed, main_data: data, ephemeral_data});
     set_textarea_value(data.current.map(({c}) => (c)).join(''));
-    const new_id_left_of_selection_start = possibly_follow_tombstones({ephemeral_data, id: id_left_of_selection_start});
+    const new_id_left_of_selection_start = possibly_follow_tombstones({main_data: data, id: id_left_of_selection_start});
     textarea.selectionStart = find_index_with_hint({array: data.current, index_hint: prev_selection_start,
                                                     filter: ({id}) => (id === new_id_left_of_selection_start)}) + 1;
-    const new_id_left_of_selection_end   = possibly_follow_tombstones({ephemeral_data, id: id_left_of_selection_end  });
+    const new_id_left_of_selection_end   = possibly_follow_tombstones({main_data: data, id: id_left_of_selection_end  });
     textarea.selectionEnd   = find_index_with_hint({array: data.current, index_hint: prev_selection_end  ,
                                                     filter: ({id}) => (id === new_id_left_of_selection_end  )}) + 1;
+
+    console.log('ymmot3', JSON.parse(JSON.stringify({main_data: data})));
   };
 })();
+
+const possibly_follow_tombstones = ({main_data, id}) => {
+  const deleted = {};
+  for(const op of main_data.history)
+    if(op.type === 'remove')
+      deleted[op.deleted_id] = 1;
+  const index_1 = main_data.history.findIndex((x) => (x.id === id));
+  for(let i=index_1; i>=0; --i)
+    if(main_data.history[i].type === 'add'  &&  !deleted[main_data.history[i].id])
+      return main_data.history[i].id;
+  return 0;
+};
 
 const handle_ack = ({to_be_sent, ack}) => {
   to_be_sent.splice(0, to_be_sent.length, ...to_be_sent.filter((x) => (x.id > ack)));
@@ -459,16 +524,19 @@ const get_self_device_id = async({master_public_key, partner_key}) => {
   }
 };
 
+/*
 const execute_operation = ({state_1, state_2, operation: op}) => {
   if(op.type === 'add') {
     const {id_to_left, id, text} = op;
     state_2.clock = Math.max(state_2.clock, id);
-    const index = state_1.current.findIndex((x) => (x.id === id));
+    const real_id_to_left = possibly_follow_tombstones({main_data: state_1, id: id_to_left});
+    const index = state_1.current.findIndex((x) => (x.id === real_id_to_left)) + 1;
     state_1.current.splice(index, 0, {id, c: text});
   } else if(op.type === 'remove') {
     const {deleted_id, id, text} = op;
     state_2.clock = Math.max(state_2.clock, id);
     const index = state_1.current.findIndex((x) => (x.id === deleted_id));
+    const id_to_left = ((index === 0) ? 0 : state_1.current[index-1].id);
     state_1.current.splice(index, 1);
   } else if(op.type === 'timestamp') {
     // Do nothing
@@ -477,18 +545,29 @@ const execute_operation = ({state_1, state_2, operation: op}) => {
   }
   state_1.history.push(op);
 };
+*/
 
 const replay = (history) => {
   console.log('replay()', {not_sorted_yet: history});
   const state_1 = {current: [], history: []};
   const state_2 = {clock: 0, timestamp: 0};
-  for(const op of [...history].sort())
-    execute_operation({state_1, state_2, operation: op});
-  console.log({state_1, state_2});
+  const sorted_history = sort_history([...history]);
+  for(const op of sorted_history)
+    state_2.clock = Math.max(state_2.clock, op.id);
+  const deleted = {};
+  for(const op of sorted_history)
+    if(op.type === 'remove')
+      deleted[op.deleted_id] = 1;
+  for(const op of sorted_history)
+    if(op.type === 'add' && !deleted[op.id])
+      state_1.current.push({id: op.id, c: op.text});
+  state_1.history = sorted_history;
+  console.log(JSON.parse(JSON.stringify({history, state_1, state_2})));
   return {state_1, state_2};
 };
 
 const normalize_dom_change = ({main_data, change, ephemeral_data, self_device_id}) => {
+  const params = JSON.parse(JSON.stringify({main_data, change, ephemeral_data, self_device_id}));
   const result = [];
   const {prev_value, removed, inserted, index, new_value} = change;
   let next_clock = (ephemeral_data.clock & -2) + 2 + self_device_id;
@@ -502,6 +581,7 @@ const normalize_dom_change = ({main_data, change, ephemeral_data, self_device_id
     const id_to_left = ((i === 0) ? ((index === 0) ? 0 : main_data.current[index - 1].id) : next_clock - 2);
     result.push({type: 'add', text: inserted, id: (next_clock += 2) - 2, id_to_left});
   }
+  console.log('normalize_dom', {...params, result});
   return result;
 };
 
@@ -563,17 +643,16 @@ const get_latest_id = ({history, self_device_id}) => {
   }
 };
 
-const save_replay = ({replayed, main_data, ephemeral_data}) => {
-  data.history.splice(0, data.history.length, ...stored_history);
+const save_replay = ({replayed, main_data: data, ephemeral_data}) => {
+  //data.history.splice(0, data.history.length, ...stored_history);
   data.current.splice(0, data.current.length, ...replayed.state_1.current);
-  Object.assign(ephemeral_data.tombstones, replayed.state_2.tombstones);
-  Object.assign(ephemeral_data.nodes, replayed.state_2.nodes);
   ephemeral_data.timestamp = replayed.state_2.timestamp;
   ephemeral_data.clock = replayed.state_2.clock;
 };
 
 const compute_initial_text = async({send_encrypted_data, self_device_id, interlocutor_latest_history, main_data: data, ephemeral_data}) => {
   const stored = localStorage.getItem('main_text_box_history');
+  console.log('ymmot8', JSON.parse(JSON.stringify({main_data: data})));
   const stored_history = ((stored === null) ? [] : JSON.parse(stored));
   console.log({stored_history});
   send_encrypted_data({type: 'latest clock', value: get_latest_id({history: stored_history, self_device_id})});  // asynchronous action
@@ -581,7 +660,10 @@ const compute_initial_text = async({send_encrypted_data, self_device_id, interlo
   console.log('about to replay');
   const replayed = replay(stored_history);
   send_encrypted_data({type: 'latest history', value: filter_network_operations({network_operations: stored_history, seen_id: other_latest_history_id, self_device_id})});  // async
-  save_replay({replayed, main_data, ephemeral_data});
+  console.log('ymmot7', JSON.parse(JSON.stringify({main_data: data})));
+  save_replay({replayed, main_data: data, ephemeral_data});
+  data.history.splice(0, data.history.length, ...replayed.state_1.history);
+  console.log('ymmot6', JSON.parse(JSON.stringify({main_data: data})));
   return data.current.map(({c}) => (c)).join('');
 };
 
@@ -657,7 +739,6 @@ const main = async() => {
 
   console.log({self_device_id});
 
-  const to_be_sent = [];
   const {network_buffer: to_be_sent} = initialize_network_manager({send_encrypted_data});
 
   let ephemeral_data = {timestamp: 0, clock: 0};
@@ -671,10 +752,16 @@ const main = async() => {
 
   const {textarea, set_value: set_textarea_value} = make_textarea({
     on_change: (change) => {
+      console.log({change});
       const normalizeds = normalize_dom_change({main_data, change, ephemeral_data, self_device_id});
       for(const operation of normalizeds) {
         to_be_sent.push(operation);
         main_data.history.push(operation);
+        console.log('ymmot1', JSON.parse(JSON.stringify(main_data.history)));
+        sort_history(main_data.history);
+        console.log('ymmot2', JSON.parse(JSON.stringify(main_data.history)));
+        const replayed = replay(main_data.history);
+        save_replay({replayed, main_data, ephemeral_data});
         save_to_disk({main_data, ephemeral_data});
       }
     },
