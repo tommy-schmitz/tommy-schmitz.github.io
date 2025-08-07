@@ -119,9 +119,9 @@ const initialize_ui = async() => {
 };
 
 const RELAY_SERVER_URL = (() => {
-  return 'http://localhost:6003';
+//  return 'http://localhost:6003';
 
-//  return 'https://relay-server-13u9.onrender.com';
+  return 'https://relay-server-13u9.onrender.com';
 
 //  if(window.location.href.startsWith('file:///')) {
 //    return 'http://localhost:6003';
