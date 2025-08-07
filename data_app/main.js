@@ -299,6 +299,8 @@ const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: li
 
   const {master_private_key, master_public_key, partner_key} = await get_keys({ui, sock});
 
+  ui.main_page_body.innerText = 'Connecting to interlocutor ...';
+
   const temp_keys = await window.crypto.subtle.generateKey({name: "ECDH", namedCurve: "P-384"}, false, ['deriveKey']);
 
   let symmetric_key = undefined;
@@ -698,6 +700,8 @@ const main = async() => {
       }
     },
   });
+
+  ui.main_page_body.innerText = 'Connection established. Loading initial data ...';
 
   console.log({self_device_id});
 
