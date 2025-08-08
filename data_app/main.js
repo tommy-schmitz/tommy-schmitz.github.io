@@ -386,7 +386,8 @@ const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: li
 };
 
 const sanitize_change = ({untrusted_change, self_device_id}) => {
-  const timestamp = Date.now();
+  const timestamp = Date.now();  // TODO: Currently, timestamps created by interlocutor while disconnected are completely distrusted.
+                                 //       Probably worth considering trusting them. At least to an extent.
   if(untrusted_change.type === 'add') {
     const clock = untrusted_change.id;
     const new_clock = (clock & -2) + (1 - self_device_id);
@@ -429,7 +430,7 @@ const sort_history = (history) => {
       graph[entry.deleted_id] = graph[entry.deleted_id] || [];
       graph[entry.deleted_id].push(entry.id);
     } else {
-      throw 1242;
+      throw new Error(1242);
     }
   }
 
@@ -468,41 +469,92 @@ const handle_network_operations = (() => {
     const prev_selection_end   = textarea.selectionEnd;
     const id_left_of_selection_start = ((textarea.selectionStart === 0) ? 0 : data.current[textarea.selectionStart - 1].id);
     const id_left_of_selection_end   = ((textarea.selectionEnd   === 0) ? 0 : data.current[textarea.selectionEnd   - 1].id);
+    console.log('handle_network_operations history length (1)', data.history.length);
     for(const untrusted_change of filter_changes({changes, highest_ack_sent})) {
       const sanitized_change = sanitize_change({untrusted_change, self_device_id});
       data.history.push(sanitized_change);
       highest_ack_sent = Math.max(highest_ack_sent, get_highest_op_id(sanitized_change));
     }
     send_encrypted_data({type: 'ack', value: highest_ack_sent});  // asynchronous action
-    sort_history(data.history);
     const replayed = replay(data.history);
     save_replay({replayed, main_data: data, ephemeral_data});
+    console.log('handle_network_operations history length (2)', data.history.length);
     save_to_disk({main_data: data, ephemeral_data});
     set_textarea_value(data.current.map(({c}) => (c)).join(''));
-    const new_id_left_of_selection_start = possibly_follow_tombstones({main_data: data, id: id_left_of_selection_start});
+    const new_id_left_of_selection_start = possibly_follow_tombstones({ephemeral_data, id: id_left_of_selection_start});
     textarea.selectionStart = find_index_with_hint({array: data.current, index_hint: prev_selection_start,
                                                     filter: ({id}) => (id === new_id_left_of_selection_start)}) + 1;
-    const new_id_left_of_selection_end   = possibly_follow_tombstones({main_data: data, id: id_left_of_selection_end  });
+    const new_id_left_of_selection_end   = possibly_follow_tombstones({ephemeral_data, id: id_left_of_selection_end  });
     textarea.selectionEnd   = find_index_with_hint({array: data.current, index_hint: prev_selection_end  ,
                                                     filter: ({id}) => (id === new_id_left_of_selection_end  )}) + 1;
 
   };
 })();
 
-const possibly_follow_tombstones = ({main_data, id}) => {
+const possibly_follow_tombstones = ({id, ephemeral_data}) => {
   const deleted = {};
-  for(const op of main_data.history)
+  for(const op of ephemeral_data.causal_tree)
     if(op.type === 'remove')
       deleted[op.deleted_id] = 1;
-  const index_1 = main_data.history.findIndex((x) => (x.id === id));
+  const index_1 = ephemeral_data.causal_tree.findIndex((x) => (x.id === id));
   for(let i=index_1; i>=0; --i)
-    if(main_data.history[i].type === 'add'  &&  !deleted[main_data.history[i].id])
-      return main_data.history[i].id;
+    if(ephemeral_data.causal_tree[i].type === 'add'  &&  !deleted[ephemeral_data.causal_tree[i].id])
+      return ephemeral_data.causal_tree[i].id;
   return 0;
 };
 
-const handle_ack = ({to_be_sent, ack}) => {
+const cleanup_causal_tree = (causal_tree) => {
+  const deleted = {};
+  for(const op of causal_tree)
+    if(op.type === 'remove')
+      deleted[op.deleted_id] = 1;
+  const heir = {0: 0};
+  const needs_heir = [];
+  for(let i=causal_tree.length-1; i>=0; --i) {
+    if(causal_tree[i].type === 'add') {
+      if(deleted[causal_tree[i].id]) {
+        needs_heir.push(causal_tree[i].id);
+      } else {
+        const heir_id = causal_tree[i].id;
+        for(const id of needs_heir)
+          heir[id] = heir_id;
+        needs_heir.splice(0, needs_heir.length);
+        heir[heir_id] = heir_id;
+      }
+    }
+  }
+  const result = [];
+  for(let i=0; i<causal_tree.length; ++i)
+    if(causal_tree[i].type === 'add'  &&  !deleted[causal_tree[i].id])
+      result.push({...causal_tree[i], id_to_left: heir[causal_tree[i].id_to_left]});
+  console.log('cleanup_causal_tree', JSON.parse(JSON.stringify({causal_tree, heir, result})));
+  return result;
+};
+
+const cleanup_history = ({cutoff_id, main_data}) => {
+  const partial_history = main_data.history.filter((x) => (x.id <= cutoff_id));
+  const serialization = serialize(partial_history);
+  const replayed = replay(partial_history);
+  const remaining_history = main_data.history.filter((x) => (x.id > cutoff_id));
+  const new_history = [{
+    type: 'compressed history',
+    serialization,
+    final_state: {
+      state_1: {current: replayed.state_1.current},
+      state_2: {
+        clock: replayed.state_2.clock,
+        causal_tree: cleanup_causal_tree(replayed.state_2.causal_tree),
+      },
+    },
+    id: cutoff_id,
+  }, ...remaining_history];
+  console.log({new_history});
+  main_data.history.splice(0, main_data.history.length, ...new_history);
+};
+
+const handle_ack = ({to_be_sent, ack, main_data}) => {
   to_be_sent.splice(0, to_be_sent.length, ...to_be_sent.filter((x) => (x.id > ack)));
+  cleanup_history({cutoff_id: ack, main_data});
 };
 
 const get_self_device_id = async({master_public_key, partner_key}) => {
@@ -520,22 +572,37 @@ const get_self_device_id = async({master_public_key, partner_key}) => {
 };
 
 const replay = (history) => {
-  const state_1 = {current: [], history: []};
-  const state_2 = {clock: 0, timestamp: 0};
-  const sorted_history = sort_history([...history]);
-  for(const op of sorted_history)
+  const state_1 = {current: [], history: [...history]};
+  const state_2 = {clock: 0, causal_tree: []};
+
+  for(const op of history) {
+    if(op.type === 'compressed history') {
+      if(state_2.causal_tree.length !== 0)
+        throw 1254;
+//      state_1.current.splice(0, state_1.current.length, ...op.final_state.state_1.current);
+      state_2.clock = op.final_state.state_2.clock;
+      state_2.causal_tree.splice(0, state_2.causal_tree.length, ...op.final_state.state_2.causal_tree);
+    } else {
+      state_2.causal_tree.push(op);
+    }
+  }
+
+  sort_history(state_2.causal_tree);
+
+  for(const op of history)
     state_2.clock = Math.max(state_2.clock, op.id);
   const deleted = {};
-  for(const op of sorted_history)
+  for(const op of state_2.causal_tree)
     if(op.type === 'remove')
       deleted[op.deleted_id] = 1;
-  for(const op of sorted_history)
+  for(const op of state_2.causal_tree)
     if(op.type === 'add' && !deleted[op.id])
       state_1.current.push({id: op.id, c: op.text});
-  state_1.history = sorted_history;
   console.log('replay()', JSON.parse(JSON.stringify({history, state_1, state_2})));
   return {state_1, state_2};
 };
+
+// "t\u0014êJa\u0002\u0000Ha\u0002\u0000oa\u0002\u0000wa\u0002\u0000 a\u0002\u0000iTa\u0002\u0000sa\u0002\u0000 a\u0002\u0000ta\u0002\u0000ha\u0002\u0000ia\u0002\u0000sa\u0002\u0000 a\u0002\u0000ta\u0002\u0000ha\u0002\u0000ia\u0002\u0000na\u0002\u0000ga\u0002\u0000 a\u0002\u0000wa\u0002\u0000oa\u0002\u0000ra\u0002\u0000ka\u0002\u0000ia\u0002\u0000na\u0002\u0000ga\u0002\u0000?ta\u0003\u0000 a\u0002\u0000Pa\u0002\u0000ra\u0002\u0000ea\u0002\u0000ta\u0002\u0000ta\u0002\u0000ya\u0002\u0000 a\u0002\u0000wa\u0002\u0000ea\u0002\u0000la\u0002\u0000la\u0002\u0000,a\u0002\u0000 a\u0002\u0000Ia\u0002\u0000 Ta\u0001\u0000.a\u0001wa\u0001 a\u0001aa\u0001Oa\u0001ga\u0001ha\u0001ea\u0001 a\u0001ra\u0001ta\u0001.a\u0001ha\u0002\u0000aa\u0002\u0000ta\u0002\u0000'a\u0002\u0000sa\u0002\u0000 a\u0002\u0000ga\u0002\u0000oa\u0002\u0000oa\u0002\u0000da\u0002\u0000.Tr\u0002ÀtHTr\u0002Àtoa\u0002Àzaa\u0002\u0000wa\u0002\u0000ea\u0002\u0000fTrÀ~oa\u0002À{aa\u0002\u0000ea\u0002\u0000fa\u0002\u0000ea\u0002\u0000wa\u0002\u0000ktr\u0002ar\u0002er\u0002fr\u0002er\u0002wr\u0002kr\u0002ar\u0002wr\u0002er\u0002fr\u0002Á\u0015wr\u0002Á\u0015 r\u0002Á\u0015ir\u0002Á\u0015sr\u0002Á\u0015 r\u0002Á\u0015tr\u0002Á\u0015hr\u0002Á\u0015ir\u0002Á\u0015sr\u0002Á\u0015 r\u0002Á\u0015tr\u0002Á\u0015hr\u0002Á\u0015ir\u0002Á\u0015nr\u0002Á\u0015gr\u0002Á\u0015 r\u0002Á\u0015wr\u0002Á\u0015or\u0002Á\u0015rr\u0002Á\u0015kr\u0002Á\u0015ir\u0002Á\u0015nr\u0002Á\u0015gr\u0002Á\u0015?r\u0002Á\u0014 r\u0002Á\u0014Pr\u0002Á\u0014rr\u0002Á\u0014er\u0002Á\u0014tr\u0002Á\u0014tr\u0002Á\u0014yr\u0002Á\u0014 r\u0002Á\u0014wr\u0002Á\u0014er\u0002Á\u0014lr\u0002Á\u0014lr\u0002Á\u0014,r\u0002Á\u0014 r\u0002Á\u0014Ir\u0002Á\u0014 r\u0002Á\u0014wr\u0002Á\u0014ar\u0002Á\u0014gr\u0002Á\u0014er\u0002Á\u0014rr\u0002Á\u0014.r\u0002Á!.r\u0002Á! r\u0002Á!Or\u0002Á!hr\u0002Á! r\u0002Á!tr\u0002Á!hr\u0002Á!ar\u0002Á!tr\u0002Á!'r\u0002Á!sr\u0002Á! r\u0002Á!gr\u0002Á!or\u0002Á!or\u0002Á!dr\u0002Á!.a\u0002Â\u0019ra\u0002\u0000ea\u0002\u0000pa\u0002\u0000la\u0002\u0000aa\u0002\u0000ca\u0002\u0000ea\u0002\u0000d"
 
 const normalize_dom_change = ({main_data, change, ephemeral_data, self_device_id}) => {
   const timestamp = Date.now();
@@ -670,20 +737,21 @@ const serialize = (history) => {
   const array = [];
   for(const item of sorted_history) {
     // Serialize timestamp:
-    const time_increase = round_down_to_nearest(item.timestamp - time, 5000);
-    console.log('MM', time_increase);
-    if(time_increase > 647500) {
-      const n = (time_increase / 5000) - 130;
-      array.push('t'.charCodeAt(0), (n>>24)&255, (n>>16)&255, (n>>8)&255, n&255);
-    } else if(time_increase >= 7500) {
-      const n = (time_increase / 5000) + 126;
-      array.push('t'.charCodeAt(0), n);
-    } else if(time_increase === 5000) {
-      array.push('T'.charCodeAt(0));
-    } else {
-      // Do nothing
+    if(item.timestamp !== undefined) {
+      const time_increase = round_down_to_nearest(item.timestamp - time, 5000);
+      if(time_increase > 647500) {
+        const n = (time_increase / 5000) - 130;
+        array.push('t'.charCodeAt(0), (n>>24)&255, (n>>16)&255, (n>>8)&255, n&255);
+      } else if(time_increase >= 7500) {
+        const n = (time_increase / 5000) + 126;
+        array.push('t'.charCodeAt(0), n);
+      } else if(time_increase === 5000) {
+        array.push('T'.charCodeAt(0));
+      } else {
+        // Do nothing
+      }
+      time += time_increase;
     }
-    time += time_increase;
 
     if(item.type === 'add') {
       const {id_to_left, id, text} = item;
@@ -699,11 +767,15 @@ const serialize = (history) => {
       array.push(...serialize_as_varnum(deleted_id - baseline));
       array.push(text.charCodeAt(0));
       baseline = id;
+    } else if(item.type === 'compressed history') {
+      array.push(...decode_binary(item.serialization.text));
+      time = item.serialization.time;
+      baseline = item.serialization.baseline;
     } else {
       throw 1244;
     }
   }
-  return encode_binary(array);
+  return {text: encode_binary(array), time, baseline};
 };
 
 const deserialize = (str) => {
@@ -763,13 +835,15 @@ const deserialize = (str) => {
 };
 
 const save_to_disk = ({main_data, ephemeral_data}) => {
+  console.log('save_to_disk: history length', main_data.history.length);
+
   // Sadly, the following sanity check is mostly pointless, since the main and ephemeral data structures are generated directly from replay().
 //  // Sanity check:
 //  const replayed = replay(main_data.history);
 //  if(make_stable_string(replayed) !== make_stable_string({state_1: main_data, state_2: ephemeral_data}))
 //    throw (console.error({real: {main_data, ephemeral_data}, replayed}), 1235);
 
-  const serialized = serialize(main_data.history);
+  const {text: serialized} = serialize(main_data.history);
 
   console.log({serialized});
 
@@ -781,21 +855,21 @@ const save_to_disk = ({main_data, ephemeral_data}) => {
   // Sanity check:
   const replayed_1 = replay(deserialize(serialized));
   const replayed_2 = replay(main_data.history);
-  replayed_1.state_1.history = replayed_2.state_1.history = null;
+  replayed_1.state_1.history = replayed_2.state_1.history = replayed_1.state_2.causal_tree = replayed_2.state_2.causal_tree = null;
   if(make_stable_string(replayed_1) !== make_stable_string(replayed_2)) {
     console.log(1253, {replayed_1, replayed_2});
-    throw 1253;
+    throw new Error(1253);
   }
 
   // Sanity check:
   const deserialized = deserialize(serialized);
-  const again = serialize(deserialized);
+  const {text: again} = serialize(deserialized);
   if(again !== serialized) {
     console.log(1252, {serialized, again_____: again, deserialized});
-    throw 1252;
+    throw new Error(1252);
   }
 
-  localStorage.setItem('main_text_box_history', JSON.stringify(main_data.history));
+  localStorage.setItem('main_text_box_history', serialized);
 };
 
 const get_latest_id = ({history, self_device_id}) => {
@@ -822,13 +896,13 @@ const get_latest_id = ({history, self_device_id}) => {
 const save_replay = ({replayed, main_data: data, ephemeral_data}) => {
   //data.history.splice(0, data.history.length, ...stored_history);
   data.current.splice(0, data.current.length, ...replayed.state_1.current);
-  ephemeral_data.timestamp = replayed.state_2.timestamp;
+  ephemeral_data.causal_tree.splice(0, ephemeral_data.causal_tree.length, ...replayed.state_2.causal_tree);
   ephemeral_data.clock = replayed.state_2.clock;
 };
 
 const compute_initial_text = async({send_encrypted_data, self_device_id, interlocutor_latest_history, main_data: data, ephemeral_data}) => {
   const stored = localStorage.getItem('main_text_box_history');
-  const stored_history = ((stored === null) ? [] : JSON.parse(stored));
+  const stored_history = ((stored === null) ? [] : deserialize(stored));
   send_encrypted_data({type: 'latest clock', value: get_latest_id({history: stored_history, self_device_id})});  // asynchronous action
   const other_latest_history_id = await interlocutor_latest_history.promise;
   console.log({other_latest_history_id});
@@ -890,9 +964,16 @@ const test_1 = () => {
     throw 'failed';
 };
 
+const test_2 = () => {
+  console.log('test_2 1', deserialize('a\x02\x00H'));
+  console.log('test_2 2', deserialize('aB2B1e'));
+  console.log('test_2 3', deserialize('aB2Bh1e'));
+};
+
 const run_tests = () => {
   console.log('Running tests ...');
-  test_1();
+//  test_1();
+//  test_2();
   console.log('Ran tests.');
 };
 
@@ -918,7 +999,7 @@ const main = async() => {
       if(parsed.type === 'changes') {
         handle_network_operations_(parsed.value);
       } else if(parsed.type === 'ack') {
-        handle_ack({to_be_sent, ack: parsed.value});
+        handle_ack({to_be_sent, ack: parsed.value, main_data});
       } else if(parsed.type === 'latest clock') {
         interlocutor_latest_history.resolve(parsed.value);
       } else if(parsed.type === 'latest history') {
@@ -937,7 +1018,7 @@ const main = async() => {
 
   const {network_buffer: to_be_sent} = initialize_network_manager({send_encrypted_data});
 
-  let ephemeral_data = {timestamp: 0, clock: 0};
+  let ephemeral_data = {clock: 0, causal_tree: []};
   let main_data = {current: [], history: []};
 
   const initial_text = await compute_initial_text({send_encrypted_data, self_device_id, interlocutor_latest_history, main_data, ephemeral_data});
@@ -953,7 +1034,6 @@ const main = async() => {
         to_be_sent.push(operation);
         main_data.history.push(operation);
       }
-      sort_history(main_data.history);
       const replayed = replay(main_data.history);
       save_replay({replayed, main_data, ephemeral_data});
       save_to_disk({main_data, ephemeral_data});
