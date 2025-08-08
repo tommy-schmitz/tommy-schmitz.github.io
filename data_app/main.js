@@ -34,6 +34,12 @@ const initialize_socket_io = async() => {
 
 const sleep = (millis) => (new Promise((resolve, reject) => (setTimeout(resolve, millis))));
 
+let real_notify = () => {};
+const notify = (message) => {
+  real_notify(message);
+  return new Error(message);
+};
+
 const make_resolvable_promise = () => {
   let resolve = null;
   let reject = null;
@@ -397,7 +403,7 @@ const sanitize_change = ({untrusted_change, self_device_id}) => {
     const new_clock = (clock & -2) + (1 - self_device_id);
     return {...untrusted_change, id: new_clock, timestamp};
   } else {
-    throw 1241;
+    throw notify(1241);
   }
 };
 
@@ -405,8 +411,8 @@ const filter_network_operations = ({network_operations, seen_id, self_device_id}
   return network_operations.filter(({id}) => (id % 2 === self_device_id  &&  id > seen_id));
 };
 
-const filter_changes = ({changes, highest_ack_sent}) => {
-  const result = changes.filter((item) => (get_highest_op_id(item) > highest_ack_sent));
+const filter_changes = ({changes, highest_id_received}) => {
+  const result = changes.filter((item) => (get_highest_op_id(item) > highest_id_received));
   return result;
 };
 
@@ -430,13 +436,13 @@ const sort_history = (history) => {
       graph[entry.deleted_id] = graph[entry.deleted_id] || [];
       graph[entry.deleted_id].push(entry.id);
     } else {
-      throw new Error(1242);
+      throw notify(1242);
     }
   }
 
   const dfs = (id) => {
     if(in_progress[id])
-      throw 1243;
+      throw notify(1243);
 
     if(finished[id])
       return;
@@ -461,21 +467,28 @@ const sort_history = (history) => {
   return history;
 };
 
-const handle_network_operations = (() => {
-  let highest_ack_sent = 0;
+const highest_id_received_state = (() => {
+  let highest_id_received = 0;
 
+  return {
+    get: () => (highest_id_received),
+    set: (x) => {highest_id_received = x;},
+  };
+})();
+
+const handle_network_operations = (() => {
   return ({send_encrypted_data, changes, textarea, main_data: data, self_device_id, set_textarea_value, ephemeral_data}) => {
     const prev_selection_start = textarea.selectionStart;
     const prev_selection_end   = textarea.selectionEnd;
     const id_left_of_selection_start = ((textarea.selectionStart === 0) ? 0 : data.current[textarea.selectionStart - 1].id);
     const id_left_of_selection_end   = ((textarea.selectionEnd   === 0) ? 0 : data.current[textarea.selectionEnd   - 1].id);
     console.log('handle_network_operations history length (1)', data.history.length);
-    for(const untrusted_change of filter_changes({changes, highest_ack_sent})) {
+    for(const untrusted_change of filter_changes({changes, highest_id_received: highest_id_received_state.get()})) {
       const sanitized_change = sanitize_change({untrusted_change, self_device_id});
       data.history.push(sanitized_change);
-      highest_ack_sent = Math.max(highest_ack_sent, get_highest_op_id(sanitized_change));
+      highest_id_received_state.set(Math.max(highest_id_received_state.get(), get_highest_op_id(sanitized_change)));
     }
-    send_encrypted_data({type: 'ack', value: highest_ack_sent});  // asynchronous action
+    send_encrypted_data({type: 'ack', value: highest_id_received_state.get()});  // asynchronous action
     const replayed = replay(data.history);
     save_replay({replayed, main_data: data, ephemeral_data});
     console.log('handle_network_operations history length (2)', data.history.length);
@@ -562,7 +575,7 @@ const get_self_device_id = async({master_public_key, partner_key}) => {
   const pk = await export_public_key(partner_key);
 
   if(mk === pk)
-    throw new Error('Cannot compute device_id: both users are using the same public key');
+    throw notify('Cannot compute device_id: both users are using the same public key');
 
   if(mk === [mk, pk].sort()[0]) {
     return 0;
@@ -578,7 +591,7 @@ const replay = (history) => {
   for(const op of history) {
     if(op.type === 'compressed history') {
       if(state_2.causal_tree.length !== 0)
-        throw 1254;
+        throw notify(1254);
 //      state_1.current.splice(0, state_1.current.length, ...op.final_state.state_1.current);
       state_2.clock = op.final_state.state_2.clock;
       state_2.causal_tree.splice(0, state_2.causal_tree.length, ...op.final_state.state_2.causal_tree);
@@ -669,7 +682,7 @@ const round_down_to_nearest = (x, y) => {
 const serialize_as_varnum = (m) => {
   if(m !== (m-(m%1))) {
     console.log(1245, m);
-    throw 1245;
+    throw notify(1245);
   }
 
   const n = Math.abs(m);
@@ -690,7 +703,7 @@ const serialize_as_varnum = (m) => {
 
   console.error('serialize_as_varnum(', m);
 
-  throw 1246;
+  throw notify(1246);
 };
 
 const deserialize_varnum = (array, index) => {
@@ -699,25 +712,25 @@ const deserialize_varnum = (array, index) => {
   let n = 0;
 
   if(index >= array.length)
-    throw 1247;
+    throw notify(1247);
 
   if((array[index] & 127) < 64)
     return [sign * (array[index] & 127), 1];
 
   if(index+1 >= array.length)
-    throw 1247;
+    throw notify(1255);
 
   if(array[index + 1] < 128)
     return [sign * (((array[index]&63)<<7) | array[index+1]), 2];
 
   if(index+2 >= array.length)
-    throw 1247;
+    throw notify(1256);
 
   if(array[index + 2] < 128)
     return [sign * (((array[index]&63)<<14) | ((array[index+1]&128)<<7) | array[index+2]), 3];
 
   if(index+3 >= array.length)
-    throw 1247;
+    throw notify(1257);
 
   return [sign * (((array[index]&63)<<21) | ((array[index+1]&128)<<14) | ((array[index+2]&128)<<7) | array[index+3]), 4];
 };
@@ -772,7 +785,7 @@ const serialize = (history) => {
       time = item.serialization.time;
       baseline = item.serialization.baseline;
     } else {
-      throw 1244;
+      throw notify(1244);
     }
   }
   return {text: encode_binary(array), time, baseline};
@@ -819,18 +832,18 @@ const deserialize = (str) => {
         index += 1 + len_1 + len_2 + 1;
       } else {
         console.log(1249, {array, history, index, byte: array[index]});
-        throw 1249;
+        throw notify(1249);
       }
     } catch(e) {
       erroring = true;
       throw e;
     } finally {
       if(!erroring  &&  (index === old_index))
-        throw 1250;
+        throw notify(1250);
     }
   }
   if(index !== array.length)
-    throw 1251;
+    throw notify(1251);
   return sort_history(history);
 };
 
@@ -858,7 +871,7 @@ const save_to_disk = ({main_data, ephemeral_data}) => {
   replayed_1.state_1.history = replayed_2.state_1.history = replayed_1.state_2.causal_tree = replayed_2.state_2.causal_tree = null;
   if(make_stable_string(replayed_1) !== make_stable_string(replayed_2)) {
     console.log(1253, {replayed_1, replayed_2});
-    throw new Error(1253);
+    throw notify(1253);
   }
 
   // Sanity check:
@@ -866,7 +879,7 @@ const save_to_disk = ({main_data, ephemeral_data}) => {
   const {text: again} = serialize(deserialized);
   if(again !== serialized) {
     console.log(1252, {serialized, again_____: again, deserialized});
-    throw new Error(1252);
+    throw notify(1252);
   }
 
   localStorage.setItem('main_text_box_history', serialized);
@@ -905,6 +918,7 @@ const compute_initial_text = async({send_encrypted_data, self_device_id, interlo
   const stored_history = ((stored === null) ? [] : deserialize(stored));
   send_encrypted_data({type: 'latest clock', value: get_latest_id({history: stored_history, self_device_id})});  // asynchronous action
   const other_latest_history_id = await interlocutor_latest_history.promise;
+  highest_id_received_state.set(other_latest_history_id);
   console.log({other_latest_history_id});
   const replayed = replay(stored_history);
   send_encrypted_data({type: 'latest history', value: filter_network_operations({network_operations: stored_history, seen_id: other_latest_history_id, self_device_id})});  // async
@@ -932,7 +946,15 @@ const make_feedback_div = () => {
     feedback_div.style.opacity = 1-(1-feedback_opacity_timer/10000)**2;
   });
   const set_feedback_message = (message) => {
+    feedback_div.style.backgroundColor = 'unset';
+    feedback_div.style.color = 'unset';
     feedback_div.innerText = message;
+    feedback_opacity_timer = 10000;
+  };
+  real_notify = (message) => {
+    feedback_div.style.backgroundColor = 'red';
+    feedback_div.style.color = 'white';
+    feedback_div.innerText = `Error: ${message}`;
     feedback_opacity_timer = 10000;
   };
   return {set_feedback_message, feedback_div};
@@ -944,8 +966,8 @@ const initialize_network_manager = ({send_encrypted_data}) => {
     while(true) {
       console.log('syncing');
       if(to_be_sent.length > 0)
-        await send_encrypted_data({type: 'changes', value: to_be_sent});
-      await sleep(7000);
+        await send_encrypted_data({type: 'changes', value: to_be_sent, highest_id_received: highest_id_received_state.get()});
+      await sleep(1000);
     }
   })();
   return {network_buffer: to_be_sent};
@@ -998,6 +1020,7 @@ const main = async() => {
     handle_decrypted_message: ({message: parsed}) => {
       if(parsed.type === 'changes') {
         handle_network_operations_(parsed.value);
+        cleanup_history({cutoff_id: parsed.highest_id_received, main_data});
       } else if(parsed.type === 'ack') {
         handle_ack({to_be_sent, ack: parsed.value, main_data});
       } else if(parsed.type === 'latest clock') {
