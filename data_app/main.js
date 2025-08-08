@@ -15,6 +15,10 @@
 //  return window.SimplePeer;
 //};
 
+const record_for_testing = (stuff) => {
+  console.log('record_for_testing', stuff);
+};
+
 const initialize_socket_io = async() => {
   console.log('initializing "socket.io"');
 
@@ -572,6 +576,9 @@ const get_self_device_id = async({master_public_key, partner_key}) => {
 };
 
 const replay = (history) => {
+  const call_record = JSON.parse(JSON.stringify({type: 'replay', history}));
+  record_for_testing(call_record);
+
   const state_1 = {current: [], history: [...history]};
   const state_2 = {clock: 0, causal_tree: []};
 
@@ -605,6 +612,9 @@ const replay = (history) => {
 // "t\u0014êJa\u0002\u0000Ha\u0002\u0000oa\u0002\u0000wa\u0002\u0000 a\u0002\u0000iTa\u0002\u0000sa\u0002\u0000 a\u0002\u0000ta\u0002\u0000ha\u0002\u0000ia\u0002\u0000sa\u0002\u0000 a\u0002\u0000ta\u0002\u0000ha\u0002\u0000ia\u0002\u0000na\u0002\u0000ga\u0002\u0000 a\u0002\u0000wa\u0002\u0000oa\u0002\u0000ra\u0002\u0000ka\u0002\u0000ia\u0002\u0000na\u0002\u0000ga\u0002\u0000?ta\u0003\u0000 a\u0002\u0000Pa\u0002\u0000ra\u0002\u0000ea\u0002\u0000ta\u0002\u0000ta\u0002\u0000ya\u0002\u0000 a\u0002\u0000wa\u0002\u0000ea\u0002\u0000la\u0002\u0000la\u0002\u0000,a\u0002\u0000 a\u0002\u0000Ia\u0002\u0000 Ta\u0001\u0000.a\u0001wa\u0001 a\u0001aa\u0001Oa\u0001ga\u0001ha\u0001ea\u0001 a\u0001ra\u0001ta\u0001.a\u0001ha\u0002\u0000aa\u0002\u0000ta\u0002\u0000'a\u0002\u0000sa\u0002\u0000 a\u0002\u0000ga\u0002\u0000oa\u0002\u0000oa\u0002\u0000da\u0002\u0000.Tr\u0002ÀtHTr\u0002Àtoa\u0002Àzaa\u0002\u0000wa\u0002\u0000ea\u0002\u0000fTrÀ~oa\u0002À{aa\u0002\u0000ea\u0002\u0000fa\u0002\u0000ea\u0002\u0000wa\u0002\u0000ktr\u0002ar\u0002er\u0002fr\u0002er\u0002wr\u0002kr\u0002ar\u0002wr\u0002er\u0002fr\u0002Á\u0015wr\u0002Á\u0015 r\u0002Á\u0015ir\u0002Á\u0015sr\u0002Á\u0015 r\u0002Á\u0015tr\u0002Á\u0015hr\u0002Á\u0015ir\u0002Á\u0015sr\u0002Á\u0015 r\u0002Á\u0015tr\u0002Á\u0015hr\u0002Á\u0015ir\u0002Á\u0015nr\u0002Á\u0015gr\u0002Á\u0015 r\u0002Á\u0015wr\u0002Á\u0015or\u0002Á\u0015rr\u0002Á\u0015kr\u0002Á\u0015ir\u0002Á\u0015nr\u0002Á\u0015gr\u0002Á\u0015?r\u0002Á\u0014 r\u0002Á\u0014Pr\u0002Á\u0014rr\u0002Á\u0014er\u0002Á\u0014tr\u0002Á\u0014tr\u0002Á\u0014yr\u0002Á\u0014 r\u0002Á\u0014wr\u0002Á\u0014er\u0002Á\u0014lr\u0002Á\u0014lr\u0002Á\u0014,r\u0002Á\u0014 r\u0002Á\u0014Ir\u0002Á\u0014 r\u0002Á\u0014wr\u0002Á\u0014ar\u0002Á\u0014gr\u0002Á\u0014er\u0002Á\u0014rr\u0002Á\u0014.r\u0002Á!.r\u0002Á! r\u0002Á!Or\u0002Á!hr\u0002Á! r\u0002Á!tr\u0002Á!hr\u0002Á!ar\u0002Á!tr\u0002Á!'r\u0002Á!sr\u0002Á! r\u0002Á!gr\u0002Á!or\u0002Á!or\u0002Á!dr\u0002Á!.a\u0002Â\u0019ra\u0002\u0000ea\u0002\u0000pa\u0002\u0000la\u0002\u0000aa\u0002\u0000ca\u0002\u0000ea\u0002\u0000d"
 
 const normalize_dom_change = ({main_data, change, ephemeral_data, self_device_id}) => {
+  const call_record = JSON.parse(JSON.stringify({type: 'normalize_dom_change', main_data, change, ephemeral_data, self_device_id}));
+  record_for_testing(call_record);
+
   const timestamp = Date.now();
   const params = JSON.parse(JSON.stringify({main_data, change, ephemeral_data, self_device_id}));
   const result = [];
@@ -835,6 +845,9 @@ const deserialize = (str) => {
 };
 
 const save_to_disk = ({main_data, ephemeral_data}) => {
+  const call_record = JSON.parse(JSON.stringify({type: 'save_to_disk', main_data, ephemeral_data}));
+  record_for_testing(call_record);
+
   console.log('save_to_disk: history length', main_data.history.length);
 
   // Sadly, the following sanity check is mostly pointless, since the main and ephemeral data structures are generated directly from replay().
@@ -869,7 +882,11 @@ const save_to_disk = ({main_data, ephemeral_data}) => {
     throw new Error(1252);
   }
 
-  localStorage.setItem('main_text_box_history', serialized);
+  {
+    const call_record = {type: 'localStorage.setItem', key: 'main_text_box_history', data: serialized};
+    record_for_testing(call_record);
+    localStorage.setItem(call_record.key, call_record.data);
+  }
 };
 
 const get_latest_id = ({history, self_device_id}) => {
@@ -996,6 +1013,8 @@ const main = async() => {
     socket_io,
     interlocutor_latest_history,
     handle_decrypted_message: ({message: parsed}) => {
+      record_for_testing({type: 'handle_decrypted_message', message: parsed});
+
       if(parsed.type === 'changes') {
         handle_network_operations_(parsed.value);
       } else if(parsed.type === 'ack') {
@@ -1029,6 +1048,8 @@ const main = async() => {
 
   const {textarea, set_value: set_textarea_value} = make_textarea({
     on_change: (change) => {
+      const call_record = {type: 'on_change', change};
+      record_for_testing(call_record);
       const normalizeds = normalize_dom_change({main_data, change, ephemeral_data, self_device_id});
       for(const operation of normalizeds) {
         to_be_sent.push(operation);
