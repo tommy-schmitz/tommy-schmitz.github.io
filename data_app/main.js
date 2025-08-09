@@ -15,18 +15,23 @@
 //  return window.SimplePeer;
 //};
 
+const ENABLE_TIMESTAMP_REPLACEMENT = true;
+
 const ENABLE_SIMULATION = false;
 
 const sleep = (millis) => (new Promise((resolve, reject) => (setTimeout(resolve, millis))));
 
 const time_now = (() => {
-  let counter = 1754700000000;
-
-  return () => {
-    const result = counter;
-    counter += 100;
-    return result;
-  };
+  if(ENABLE_TIMESTAMP_REPLACEMENT) {
+    let counter = 1754700000000;
+    return () => {
+      const result = counter;
+      counter += 100;
+      return result;
+    };
+  } else {
+    return () => (Date.now());
+  }
 })();
 
 window.event_log_for_testing = [];
@@ -1174,6 +1179,9 @@ const main = async() => {
   console.log({initial_text});
 
   const {set_feedback_message, feedback_div} = make_feedback_div();
+
+  if(ENABLE_TIMESTAMP_REPLACEMENT)
+    set_feedback_message('Note: fake timestamps are being recorded (for testing purposes).');
 
   const on_change = (change) => {
     const call_record = {type: 'on_change', change, device_id: self_device_id};
