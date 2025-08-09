@@ -4,17 +4,23 @@ const make_textarea = ({on_change, on_undo, on_redo}) => {
   let start;
   let end;
   textarea.addEventListener('beforeinput', (ev) => {
-    console.log({ev, value: ev.target.value, target_ranges: ev.getTargetRanges(), selection_start: ev.target.selectionStart, inputType: ev.inputType});
-    if(ev.inputType === 'deleteContentBackward'  &&  textarea.selectionStart === textarea.selectionEnd) {
-      start = Math.max(0, textarea.selectionStart - 1);
-      end = textarea.selectionStart;
-    } else if(ev.inputType === 'deleteContentForward'  &&  textarea.selectionStart === textarea.selectionEnd) {
-      start = textarea.selectionStart;
-      end = Math.min(textarea.selectionStart + 1, textarea.value.length);
-    } else {
-      start = textarea.selectionStart;
-      end = textarea.selectionEnd;
-    }
+    const call_record = {type: 'beforeinput', value: ev.target.value, selection_start: ev.target.selectionStart, selection_end: ev.target.selectionEnd, input_type: ev.inputType};
+//    record_for_testing(call_record);
+
+    const real_logic = ({value, selection_start, selection_end, input_type}) => {
+      //console.log({ev, value: ev.target.value, target_ranges: ev.getTargetRanges(), selection_start: ev.target.selectionStart, inputType: ev.inputType});
+      if(input_type === 'deleteContentBackward'  &&  selection_start === selection_end) {
+        return {start: Math.max(0, selection_start - 1), end: selection_start};
+      } else if(input_type === 'deleteContentForward'  &&  selection_start === selection_end) {
+        return {start: selection_start, end: Math.min(selection_start + 1, value.length)};
+      } else {
+        return {start: selection_start, end: selection_end};
+      }
+    };
+
+    const output = real_logic(call_record);
+//    record_for_testing({type: 'output', call_record, output});
+    ({start, end} = output);
   });
   textarea.addEventListener('input', (e) => {
     if(e.inputType === 'historyUndo') {

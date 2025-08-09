@@ -15,6 +15,74 @@
 //  return window.SimplePeer;
 //};
 
+const ENABLE_SIMULATION = false;
+
+const sleep = (millis) => (new Promise((resolve, reject) => (setTimeout(resolve, millis))));
+
+const time_now = (() => {
+  let counter = 1754700000000;
+
+  return () => {
+    const result = counter;
+    counter += 100;
+    return result;
+  };
+})();
+
+window.event_log_for_testing = [];
+
+const record_for_testing = (stuff) => {
+  const timestamp = Date.now();
+  window.event_log_for_testing.push({...stuff, timestamp});
+};
+
+const harness = (() => {
+  const simulator = {};
+
+  const register = (item) => {
+    for(const key in item)
+      simulator[key] = item[key];
+  };
+
+  const simulate = async() => {
+    for(const item of transcript_for_testing) {
+      if(item.device_id === 0) {
+        if(item.type === 'on_change'  ||  item.type === 'handle_decrypted_message') {
+          const now = transcript_for_testing[0].timestamp - 4000 + performance.now();
+          if(now < item.timestamp)
+            await sleep(item.timestamp - now);
+        }
+        if(item.type === 'on_change') {
+          simulator.on_change(item.change);
+          simulator.set_textarea_value(item.change.new_value);
+        }
+        if(item.type === 'handle_decrypted_message')
+          simulator.handle_decrypted_message(item);
+      }
+      console.log('Simulated ', item.type, item);
+    }
+  };
+
+  return {register, simulate};
+})();
+
+const suppress_timestamps = (transcript) => {
+  return transcript.map(({timestamp, ...item}) => {
+    return item;
+  });
+};
+
+const diff_transcripts = () => {
+  //console.log(JSON_diff([1,{x:1,y:2},3,4], [1,{x:1,y:3},2]));
+  //console.log(JSON_intersection([1,{x:1,y:2},3,4], [1,{x:1,y:3},2]));
+  //const transcript_1 = transcript_for_testing.filter((x) => (x.device_id !== 1));
+  const t_1 = suppress_timestamps(transcript_for_testing);
+  const t_2 = suppress_timestamps(transcript_2);
+  console.log('diff', JSON_diff(t_1, t_2));
+  console.log('intersection', JSON_intersection(t_1, t_2));
+};
+diff_transcripts();
+
 const initialize_socket_io = async() => {
   console.log('initializing "socket.io"');
 
@@ -32,8 +100,6 @@ const initialize_socket_io = async() => {
   return window.io;
 };
 
-const sleep = (millis) => (new Promise((resolve, reject) => (setTimeout(resolve, millis))));
-
 let real_notify = () => {};
 const notify = (message) => {
   real_notify(message);
@@ -50,66 +116,66 @@ const make_resolvable_promise = () => {
   return {promise, resolve, reject};
 };
 
-// This function make_stable_string() is (decently well) optimized for performance. Instead of readability.
-const make_stable_string = (json_value) => {
-  let indent_level = 0;
-  const state = ['done', json_value, 'json'];
-  const reverser = [];
-  let result = '';
-  for(;;) {
-    const top = state.pop();
-    if(top === 'json') {
-      const top2 = state.pop();
-      if(Array.isArray(top2)) {
-        state.push(']', 'text', 'indent', 'decrement indent level');
-        for(let i=0; i<top2.length; ++i) {
-          const v2 = top2[top2.length - 1 - i];
-          if(i > 0)
-            state.push(',\n');
-          else
-            state.push('\n');
-          state.push('text', v2, 'json', 'indent');
-        }
-        state.push('[\n', 'text', 'increment indent level');
-      } else if(top2 === null) {
-        result += 'null';
-      } else if(typeof top2 === 'object') {
-        state.push('}', 'text', 'indent', 'decrement indent level');
-        for(const key of Object.keys(top2).sort())
-          reverser.push(key);
-        const original_length = reverser.length;
-        while(reverser.length > 0) {
-          const key = reverser.pop();
-          const v2 = (top2)[key];
-          if(reverser.length === original_length-1)
-            state.push('\n');
-          else
-            state.push(',\n');
-          state.push('text', v2, 'json', `${JSON.stringify(key)}: `, 'text', 'indent');
-        }
-        state.push('{\n', 'text', 'increment indent level');
-      } else {
-        result += JSON.stringify(top2);
-      }
-    } else if(top === 'text') {
-      result += state.pop();
-    } else if(top === 'decrement indent level') {
-      --indent_level;
-    } else if(top === 'indent') {
-      for(let i=0; i<indent_level; ++i)
-        result += '  ';
-    } else if(top === 'increment indent level') {
-      ++indent_level;
-    } else if(top === 'done') {
-      break;
-    } else {
-      const unreachable = top;
-      console.log(top);
-      throw new Error('assertion failed');
-    }
-  }
-  return result;
-};
+//// This function make_stable_string() is (decently well) optimized for performance. Instead of readability.
+//const make_stable_string = (json_value) => {
+//  let indent_level = 0;
+//  const state = ['done', json_value, 'json'];
+//  const reverser = [];
+//  let result = '';
+//  for(;;) {
+//    const top = state.pop();
+//    if(top === 'json') {
+//      const top2 = state.pop();
+//      if(Array.isArray(top2)) {
+//        state.push(']', 'text', 'indent', 'decrement indent level');
+//        for(let i=0; i<top2.length; ++i) {
+//          const v2 = top2[top2.length - 1 - i];
+//          if(i > 0)
+//            state.push(',\n');
+//          else
+//            state.push('\n');
+//          state.push('text', v2, 'json', 'indent');
+//        }
+//        state.push('[\n', 'text', 'increment indent level');
+//      } else if(top2 === null) {
+//        result += 'null';
+//      } else if(typeof top2 === 'object') {
+//        state.push('}', 'text', 'indent', 'decrement indent level');
+//        for(const key of Object.keys(top2).sort())
+//          reverser.push(key);
+//        const original_length = reverser.length;
+//        while(reverser.length > 0) {
+//          const key = reverser.pop();
+//          const v2 = (top2)[key];
+//          if(reverser.length === original_length-1)
+//            state.push('\n');
+//          else
+//            state.push(',\n');
+//          state.push('text', v2, 'json', `${JSON.stringify(key)}: `, 'text', 'indent');
+//        }
+//        state.push('{\n', 'text', 'increment indent level');
+//      } else {
+//        result += JSON.stringify(top2);
+//      }
+//    } else if(top === 'text') {
+//      result += state.pop();
+//    } else if(top === 'decrement indent level') {
+//      --indent_level;
+//    } else if(top === 'indent') {
+//      for(let i=0; i<indent_level; ++i)
+//        result += '  ';
+//    } else if(top === 'increment indent level') {
+//      ++indent_level;
+//    } else if(top === 'done') {
+//      break;
+//    } else {
+//      const unreachable = top;
+//      console.log(top);
+//      throw new Error('assertion failed');
+//    }
+//  }
+//  return result;
+//};
 
 const initialize_ui = async() => {
   await page_load_promise;
@@ -374,7 +440,7 @@ const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: li
 
   // Transmit transient public key:
   {
-    const data = {public_key: await export_public_key(temp_keys.publicKey), timestamp: Date.now()};
+    const data = {public_key: await export_public_key(temp_keys.publicKey), timestamp: time_now()};
     sock.emit('interlocutor should hear', {type: 'set public key', data, signature: await digitally_sign(master_private_key, data)});
   }
 
@@ -392,7 +458,7 @@ const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: li
 };
 
 const sanitize_change = ({untrusted_change, self_device_id}) => {
-  const timestamp = Date.now();  // TODO: Currently, timestamps created by interlocutor while disconnected are completely distrusted.
+  const timestamp = time_now();  // TODO: Currently, timestamps created by interlocutor while disconnected are completely distrusted.
                                  //       Probably worth considering trusting them. At least to an extent.
   if(untrusted_change.type === 'add') {
     const clock = untrusted_change.id;
@@ -585,6 +651,9 @@ const get_self_device_id = async({master_public_key, partner_key}) => {
 };
 
 const replay = (history) => {
+  const call_record = JSON.parse(JSON.stringify({type: 'replay', history}));
+  record_for_testing(call_record);
+
   const state_1 = {current: [], history: [...history]};
   const state_2 = {clock: 0, causal_tree: []};
 
@@ -618,7 +687,10 @@ const replay = (history) => {
 // "t\u0014êJa\u0002\u0000Ha\u0002\u0000oa\u0002\u0000wa\u0002\u0000 a\u0002\u0000iTa\u0002\u0000sa\u0002\u0000 a\u0002\u0000ta\u0002\u0000ha\u0002\u0000ia\u0002\u0000sa\u0002\u0000 a\u0002\u0000ta\u0002\u0000ha\u0002\u0000ia\u0002\u0000na\u0002\u0000ga\u0002\u0000 a\u0002\u0000wa\u0002\u0000oa\u0002\u0000ra\u0002\u0000ka\u0002\u0000ia\u0002\u0000na\u0002\u0000ga\u0002\u0000?ta\u0003\u0000 a\u0002\u0000Pa\u0002\u0000ra\u0002\u0000ea\u0002\u0000ta\u0002\u0000ta\u0002\u0000ya\u0002\u0000 a\u0002\u0000wa\u0002\u0000ea\u0002\u0000la\u0002\u0000la\u0002\u0000,a\u0002\u0000 a\u0002\u0000Ia\u0002\u0000 Ta\u0001\u0000.a\u0001wa\u0001 a\u0001aa\u0001Oa\u0001ga\u0001ha\u0001ea\u0001 a\u0001ra\u0001ta\u0001.a\u0001ha\u0002\u0000aa\u0002\u0000ta\u0002\u0000'a\u0002\u0000sa\u0002\u0000 a\u0002\u0000ga\u0002\u0000oa\u0002\u0000oa\u0002\u0000da\u0002\u0000.Tr\u0002ÀtHTr\u0002Àtoa\u0002Àzaa\u0002\u0000wa\u0002\u0000ea\u0002\u0000fTrÀ~oa\u0002À{aa\u0002\u0000ea\u0002\u0000fa\u0002\u0000ea\u0002\u0000wa\u0002\u0000ktr\u0002ar\u0002er\u0002fr\u0002er\u0002wr\u0002kr\u0002ar\u0002wr\u0002er\u0002fr\u0002Á\u0015wr\u0002Á\u0015 r\u0002Á\u0015ir\u0002Á\u0015sr\u0002Á\u0015 r\u0002Á\u0015tr\u0002Á\u0015hr\u0002Á\u0015ir\u0002Á\u0015sr\u0002Á\u0015 r\u0002Á\u0015tr\u0002Á\u0015hr\u0002Á\u0015ir\u0002Á\u0015nr\u0002Á\u0015gr\u0002Á\u0015 r\u0002Á\u0015wr\u0002Á\u0015or\u0002Á\u0015rr\u0002Á\u0015kr\u0002Á\u0015ir\u0002Á\u0015nr\u0002Á\u0015gr\u0002Á\u0015?r\u0002Á\u0014 r\u0002Á\u0014Pr\u0002Á\u0014rr\u0002Á\u0014er\u0002Á\u0014tr\u0002Á\u0014tr\u0002Á\u0014yr\u0002Á\u0014 r\u0002Á\u0014wr\u0002Á\u0014er\u0002Á\u0014lr\u0002Á\u0014lr\u0002Á\u0014,r\u0002Á\u0014 r\u0002Á\u0014Ir\u0002Á\u0014 r\u0002Á\u0014wr\u0002Á\u0014ar\u0002Á\u0014gr\u0002Á\u0014er\u0002Á\u0014rr\u0002Á\u0014.r\u0002Á!.r\u0002Á! r\u0002Á!Or\u0002Á!hr\u0002Á! r\u0002Á!tr\u0002Á!hr\u0002Á!ar\u0002Á!tr\u0002Á!'r\u0002Á!sr\u0002Á! r\u0002Á!gr\u0002Á!or\u0002Á!or\u0002Á!dr\u0002Á!.a\u0002Â\u0019ra\u0002\u0000ea\u0002\u0000pa\u0002\u0000la\u0002\u0000aa\u0002\u0000ca\u0002\u0000ea\u0002\u0000d"
 
 const normalize_dom_change = ({main_data, change, ephemeral_data, self_device_id}) => {
-  const timestamp = Date.now();
+  const call_record = JSON.parse(JSON.stringify({type: 'normalize_dom_change', main_data, change, ephemeral_data, self_device_id}));
+  record_for_testing(call_record);
+
+  const timestamp = time_now();
   const params = JSON.parse(JSON.stringify({main_data, change, ephemeral_data, self_device_id}));
   const result = [];
   const {prev_value, removed, inserted, index, new_value} = change;
@@ -848,6 +920,9 @@ const deserialize = (str) => {
 };
 
 const save_to_disk = ({main_data, ephemeral_data}) => {
+  const call_record = JSON.parse(JSON.stringify({type: 'save_to_disk', main_data, ephemeral_data}));
+  record_for_testing(call_record);
+
   console.log('save_to_disk: history length', main_data.history.length);
 
   // Sadly, the following sanity check is mostly pointless, since the main and ephemeral data structures are generated directly from replay().
@@ -882,7 +957,11 @@ const save_to_disk = ({main_data, ephemeral_data}) => {
     throw notify(1252);
   }
 
-  localStorage.setItem('main_text_box_history', serialized);
+  {
+    const call_record = {type: 'localStorage.setItem', key: 'main_text_box_history', value: serialized};
+    record_for_testing(call_record);
+    localStorage.setItem(call_record.key, call_record.value);
+  }
 };
 
 const get_latest_id = ({history, self_device_id}) => {
@@ -914,7 +993,14 @@ const save_replay = ({replayed, main_data: data, ephemeral_data}) => {
 };
 
 const compute_initial_text = async({send_encrypted_data, self_device_id, interlocutor_latest_history, main_data: data, ephemeral_data}) => {
-  const stored = localStorage.getItem('main_text_box_history');
+  const stored = (() => {
+    if(ENABLE_SIMULATION) {
+      return transcript_for_testing.find((x) => (x.type === 'localStorage.getItem'  &&  x.key === 'main_text_box_history')).value;
+    } else {
+      return localStorage.getItem('main_text_box_history');
+    }
+  })();
+  record_for_testing({type: 'localStorage.getItem', key: 'main_text_box_history', value: stored, device_id: self_device_id});
   const stored_history = ((stored === null) ? [] : deserialize(stored));
   send_encrypted_data({type: 'latest clock', value: get_latest_id({history: stored_history, self_device_id})});  // asynchronous action
   const other_latest_history_id = await interlocutor_latest_history.promise;
@@ -1013,31 +1099,38 @@ const main = async() => {
     handle_network_operations({changes, send_encrypted_data, textarea, main_data, self_device_id, set_textarea_value, ephemeral_data});
   };
 
-  const {send_encrypted_data, self_device_id} = await get_encrypted_channel({
-    ui,
-    socket_io,
-    interlocutor_latest_history,
-    handle_decrypted_message: ({message: parsed}) => {
-      if(parsed.type === 'changes') {
-        handle_network_operations_(parsed.value);
-        cleanup_history({cutoff_id: parsed.highest_id_received, main_data});
-      } else if(parsed.type === 'ack') {
-        handle_ack({to_be_sent, ack: parsed.value, main_data});
-      } else if(parsed.type === 'latest clock') {
-        interlocutor_latest_history.resolve(parsed.value);
-      } else if(parsed.type === 'latest history') {
-        console.log('Received operations:', parsed.value);
-        handle_network_operations_(parsed.value);
-        done_processing_latest_history.resolve();
-      } else {
-        console.warn('Unrecognized message type (2):', parsed.type);
-      }
-    },
-  });
+  const handle_decrypted_message_ = ({message: parsed}) => {
+    record_for_testing({type: 'handle_decrypted_message', message: parsed, device_id: self_device_id});
+
+    if(parsed.type === 'changes') {
+      handle_network_operations_(parsed.value);
+      cleanup_history({cutoff_id: parsed.highest_id_received, main_data});
+    } else if(parsed.type === 'ack') {
+      handle_ack({to_be_sent, ack: parsed.value, main_data});
+    } else if(parsed.type === 'latest clock') {
+      interlocutor_latest_history.resolve(parsed.value);
+    } else if(parsed.type === 'latest history') {
+      console.log('Received operations:', parsed.value);
+      handle_network_operations_(parsed.value);
+      done_processing_latest_history.resolve();
+    } else {
+      console.warn('Unrecognized message type (2):', parsed.type);
+    }
+  };
+
+  const handle_decrypted_message = ((ENABLE_SIMULATION) ? () => {} : handle_decrypted_message_);
+
+  harness.register({handle_decrypted_message: handle_decrypted_message_});
+
+  const {send_encrypted_data, self_device_id} = await get_encrypted_channel({ui, socket_io, interlocutor_latest_history,
+                                                                             handle_decrypted_message                   });
 
   ui.main_page_body.innerText = 'Connection established. Loading initial data ...';
 
   console.log({self_device_id});
+
+  if(ENABLE_SIMULATION)
+    harness.simulate();
 
   const {network_buffer: to_be_sent} = initialize_network_manager({send_encrypted_data});
 
@@ -1050,17 +1143,23 @@ const main = async() => {
 
   const {set_feedback_message, feedback_div} = make_feedback_div();
 
+  const on_change = (change) => {
+    const call_record = {type: 'on_change', change, device_id: self_device_id};
+    record_for_testing(call_record);
+    const normalizeds = normalize_dom_change({main_data, change, ephemeral_data, self_device_id});
+    for(const operation of normalizeds) {
+      to_be_sent.push(operation);
+      main_data.history.push(operation);
+    }
+    const replayed = replay(main_data.history);
+    save_replay({replayed, main_data, ephemeral_data});
+    save_to_disk({main_data, ephemeral_data});
+  };
+
+  harness.register({on_change});
+
   const {textarea, set_value: set_textarea_value} = make_textarea({
-    on_change: (change) => {
-      const normalizeds = normalize_dom_change({main_data, change, ephemeral_data, self_device_id});
-      for(const operation of normalizeds) {
-        to_be_sent.push(operation);
-        main_data.history.push(operation);
-      }
-      const replayed = replay(main_data.history);
-      save_replay({replayed, main_data, ephemeral_data});
-      save_to_disk({main_data, ephemeral_data});
-    },
+    on_change,
 
     // TODO: implement proper undo and redo in this portion of the code
     // For now, we'll just disable:
@@ -1071,6 +1170,8 @@ const main = async() => {
       set_feedback_message("Undo/redo functionality hasn't been implemented yet and is currently disabled. Sorry!");
     },
   });
+
+  harness.register({set_textarea_value});
 
   set_textarea_value(initial_text);
 
