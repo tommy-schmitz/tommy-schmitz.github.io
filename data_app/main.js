@@ -1128,7 +1128,8 @@ const main = async() => {
       const ack = parsed.highest_id_received;
       if(ack === undefined)
         throw notify(1258);
-      cleanup_history({cutoff_id: ack, main_data});
+      cleanup_history({cutoff_id: ack, main_data});  // TODO: There exist unsafe values of cutoff_id. Therefore ack should be checked somehow.
+                                                     // Otherwise an adversary can corrupt your data with a maliciously chosen ack.
       to_be_sent.splice(0, to_be_sent.length, ...to_be_sent.filter((x) => (x.id > ack)));
     } else if(parsed.type === 'latest clock') {
       interlocutor_latest_history.resolve(parsed.value);
