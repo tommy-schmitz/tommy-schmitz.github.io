@@ -2896,9 +2896,9 @@ const transcript_2 = [
     {
         "type": "localStorage.getItem",
         "key": "main_text_box_history",
-        "value": null,
+        "value": "",
         "device_id": 0,
-        "timestamp": 4171.800000190735
+        "timestamp": 3378.199999809265
     },
     {
         "type": "handle_decrypted_message",
@@ -2907,12 +2907,12 @@ const transcript_2 = [
             "value": 0
         },
         "device_id": 0,
-        "timestamp": 4447
+        "timestamp": 4190.800000190735
     },
     {
         "type": "replay",
         "history": [],
-        "timestamp": 4448.5
+        "timestamp": 4191.89999961853
     },
     {
         "type": "handle_decrypted_message",
@@ -2921,12 +2921,12 @@ const transcript_2 = [
             "value": []
         },
         "device_id": 0,
-        "timestamp": 4660.900000572205
+        "timestamp": 4488.800000190735
     },
     {
         "type": "replay",
         "history": [],
-        "timestamp": 4661.800000190735
+        "timestamp": 4489.800000190735
     },
     {
         "type": "save_to_disk",
@@ -2938,23 +2938,23 @@ const transcript_2 = [
             "clock": 0,
             "causal_tree": []
         },
-        "timestamp": 4662.400000572205
+        "timestamp": 4490.5
     },
     {
         "type": "replay",
         "history": [],
-        "timestamp": 4663.200000762939
+        "timestamp": 4491.099999427795
     },
     {
         "type": "replay",
         "history": [],
-        "timestamp": 4663.60000038147
+        "timestamp": 4491.300000190735
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
         "value": "",
-        "timestamp": 4664.400000572205
+        "timestamp": 4491.89999961853
     },
     {
         "type": "handle_decrypted_message",
@@ -2963,12 +2963,12 @@ const transcript_2 = [
             "value": 0
         },
         "device_id": 0,
-        "timestamp": 4858.200000762939
+        "timestamp": 4714.5
     },
     {
         "type": "replay",
         "history": [],
-        "timestamp": 4858.400000572205
+        "timestamp": 4714.699999809265
     },
     {
         "type": "on_change",
@@ -2980,7 +2980,7 @@ const transcript_2 = [
             "new_value": "A"
         },
         "device_id": 0,
-        "timestamp": 16018.20000076294
+        "timestamp": 22565.800000190735
     },
     {
         "type": "normalize_dom_change",
@@ -3019,7 +3019,7 @@ const transcript_2 = [
             "causal_tree": []
         },
         "self_device_id": 0,
-        "timestamp": 16018.400000572205
+        "timestamp": 22566
     },
     {
         "type": "replay",
@@ -3047,10 +3047,10 @@ const transcript_2 = [
                 "text": "A",
                 "id": 2,
                 "id_to_left": 0,
-                "timestamp": 1754673194938
+                "timestamp": 1754713846700
             }
         ],
-        "timestamp": 16018.60000038147
+        "timestamp": 22566.199999809265
     },
     {
         "type": "save_to_disk",
@@ -3085,7 +3085,7 @@ const transcript_2 = [
                     "text": "A",
                     "id": 2,
                     "id_to_left": 0,
-                    "timestamp": 1754673194938
+                    "timestamp": 1754713846700
                 }
             ]
         },
@@ -3097,11 +3097,11 @@ const transcript_2 = [
                     "text": "A",
                     "id": 2,
                     "id_to_left": 0,
-                    "timestamp": 1754673194938
+                    "timestamp": 1754713846700
                 }
             ]
         },
-        "timestamp": 16019
+        "timestamp": 22566.599999427795
     },
     {
         "type": "replay",
@@ -3111,10 +3111,10 @@ const transcript_2 = [
                 "id": 2,
                 "id_to_left": 0,
                 "text": "A",
-                "timestamp": 1754673190000
+                "timestamp": 1754713845000
             }
         ],
-        "timestamp": 16019.70000076294
+        "timestamp": 22567.300000190735
     },
     {
         "type": "replay",
@@ -3142,16 +3142,16 @@ const transcript_2 = [
                 "text": "A",
                 "id": 2,
                 "id_to_left": 0,
-                "timestamp": 1754673194938
+                "timestamp": 1754713846700
             }
         ],
-        "timestamp": 16020
+        "timestamp": 22567.599999427795
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
-        "value": "t\u0014êÕìa\u0002\u0000A",
-        "timestamp": 16020.400000572205
+        "value": "t\u0014êõ¯a\u0002\u0000A",
+        "timestamp": 22568.099999427795
     },
     {
         "type": "handle_decrypted_message",
@@ -3160,7 +3160,7 @@ const transcript_2 = [
             "value": 2
         },
         "device_id": 0,
-        "timestamp": 18688.400000572205
+        "timestamp": 25400.5
     },
     {
         "type": "replay",
@@ -3188,10 +3188,10 @@ const transcript_2 = [
                 "text": "A",
                 "id": 2,
                 "id_to_left": 0,
-                "timestamp": 1754673194938
+                "timestamp": 1754713846700
             }
         ],
-        "timestamp": 18688.60000038147
+        "timestamp": 25400.699999809265
     },
     {
         "type": "on_change",
@@ -3203,7 +3203,7 @@ const transcript_2 = [
             "new_value": "AB"
         },
         "device_id": 0,
-        "timestamp": 21413.10000038147
+        "timestamp": 26491.300000190735
     },
     {
         "type": "normalize_dom_change",
@@ -3218,8 +3218,8 @@ const transcript_2 = [
                 {
                     "type": "compressed history",
                     "serialization": {
-                        "text": "t\u0014êÕìa\u0002\u0000A",
-                        "time": 1754673190000,
+                        "text": "t\u0014êõ¯a\u0002\u0000A",
+                        "time": 1754713845000,
                         "baseline": 2
                     },
                     "final_state": {
@@ -3239,7 +3239,7 @@ const transcript_2 = [
                                     "text": "A",
                                     "id": 2,
                                     "id_to_left": 0,
-                                    "timestamp": 1754673194938
+                                    "timestamp": 1754713846700
                                 }
                             ]
                         }
@@ -3263,12 +3263,12 @@ const transcript_2 = [
                     "text": "A",
                     "id": 2,
                     "id_to_left": 0,
-                    "timestamp": 1754673194938
+                    "timestamp": 1754713846700
                 }
             ]
         },
         "self_device_id": 0,
-        "timestamp": 21413.20000076294
+        "timestamp": 26491.39999961853
     },
     {
         "type": "replay",
@@ -3276,8 +3276,8 @@ const transcript_2 = [
             {
                 "type": "compressed history",
                 "serialization": {
-                    "text": "t\u0014êÕìa\u0002\u0000A",
-                    "time": 1754673190000,
+                    "text": "t\u0014êõ¯a\u0002\u0000A",
+                    "time": 1754713845000,
                     "baseline": 2
                 },
                 "final_state": {
@@ -3297,7 +3297,7 @@ const transcript_2 = [
                                 "text": "A",
                                 "id": 2,
                                 "id_to_left": 0,
-                                "timestamp": 1754673194938
+                                "timestamp": 1754713846700
                             }
                         ]
                     }
@@ -3309,10 +3309,10 @@ const transcript_2 = [
                 "text": "B",
                 "id": 4,
                 "id_to_left": 2,
-                "timestamp": 1754673200333
+                "timestamp": 1754713850625
             }
         ],
-        "timestamp": 21413.400000572205
+        "timestamp": 26491.699999809265
     },
     {
         "type": "save_to_disk",
@@ -3331,8 +3331,8 @@ const transcript_2 = [
                 {
                     "type": "compressed history",
                     "serialization": {
-                        "text": "t\u0014êÕìa\u0002\u0000A",
-                        "time": 1754673190000,
+                        "text": "t\u0014êõ¯a\u0002\u0000A",
+                        "time": 1754713845000,
                         "baseline": 2
                     },
                     "final_state": {
@@ -3352,7 +3352,7 @@ const transcript_2 = [
                                     "text": "A",
                                     "id": 2,
                                     "id_to_left": 0,
-                                    "timestamp": 1754673194938
+                                    "timestamp": 1754713846700
                                 }
                             ]
                         }
@@ -3364,7 +3364,7 @@ const transcript_2 = [
                     "text": "B",
                     "id": 4,
                     "id_to_left": 2,
-                    "timestamp": 1754673200333
+                    "timestamp": 1754713850625
                 }
             ]
         },
@@ -3376,18 +3376,18 @@ const transcript_2 = [
                     "text": "A",
                     "id": 2,
                     "id_to_left": 0,
-                    "timestamp": 1754673194938
+                    "timestamp": 1754713846700
                 },
                 {
                     "type": "add",
                     "text": "B",
                     "id": 4,
                     "id_to_left": 2,
-                    "timestamp": 1754673200333
+                    "timestamp": 1754713850625
                 }
             ]
         },
-        "timestamp": 21413.800000190735
+        "timestamp": 26491.89999961853
     },
     {
         "type": "replay",
@@ -3397,17 +3397,17 @@ const transcript_2 = [
                 "id": 2,
                 "id_to_left": 0,
                 "text": "A",
-                "timestamp": 1754673190000
+                "timestamp": 1754713845000
             },
             {
                 "type": "add",
                 "id": 4,
                 "id_to_left": 2,
                 "text": "B",
-                "timestamp": 1754673200000
+                "timestamp": 1754713850000
             }
         ],
-        "timestamp": 21414.400000572205
+        "timestamp": 26492.599999427795
     },
     {
         "type": "replay",
@@ -3415,8 +3415,8 @@ const transcript_2 = [
             {
                 "type": "compressed history",
                 "serialization": {
-                    "text": "t\u0014êÕìa\u0002\u0000A",
-                    "time": 1754673190000,
+                    "text": "t\u0014êõ¯a\u0002\u0000A",
+                    "time": 1754713845000,
                     "baseline": 2
                 },
                 "final_state": {
@@ -3436,7 +3436,7 @@ const transcript_2 = [
                                 "text": "A",
                                 "id": 2,
                                 "id_to_left": 0,
-                                "timestamp": 1754673194938
+                                "timestamp": 1754713846700
                             }
                         ]
                     }
@@ -3448,16 +3448,16 @@ const transcript_2 = [
                 "text": "B",
                 "id": 4,
                 "id_to_left": 2,
-                "timestamp": 1754673200333
+                "timestamp": 1754713850625
             }
         ],
-        "timestamp": 21414.70000076294
+        "timestamp": 26492.89999961853
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
-        "value": "t\u0014êÕìa\u0002\u0000Ata\u0002\u0000B",
-        "timestamp": 21415.20000076294
+        "value": "t\u0014êõ¯a\u0002\u0000ATa\u0002\u0000B",
+        "timestamp": 26493.300000190735
     },
     {
         "type": "on_change",
@@ -3469,7 +3469,7 @@ const transcript_2 = [
             "new_value": "ABC"
         },
         "device_id": 0,
-        "timestamp": 22249.20000076294
+        "timestamp": 26843.39999961853
     },
     {
         "type": "normalize_dom_change",
@@ -3488,8 +3488,8 @@ const transcript_2 = [
                 {
                     "type": "compressed history",
                     "serialization": {
-                        "text": "t\u0014êÕìa\u0002\u0000A",
-                        "time": 1754673190000,
+                        "text": "t\u0014êõ¯a\u0002\u0000A",
+                        "time": 1754713845000,
                         "baseline": 2
                     },
                     "final_state": {
@@ -3509,7 +3509,7 @@ const transcript_2 = [
                                     "text": "A",
                                     "id": 2,
                                     "id_to_left": 0,
-                                    "timestamp": 1754673194938
+                                    "timestamp": 1754713846700
                                 }
                             ]
                         }
@@ -3521,7 +3521,7 @@ const transcript_2 = [
                     "text": "B",
                     "id": 4,
                     "id_to_left": 2,
-                    "timestamp": 1754673200333
+                    "timestamp": 1754713850625
                 }
             ]
         },
@@ -3540,19 +3540,19 @@ const transcript_2 = [
                     "text": "A",
                     "id": 2,
                     "id_to_left": 0,
-                    "timestamp": 1754673194938
+                    "timestamp": 1754713846700
                 },
                 {
                     "type": "add",
                     "text": "B",
                     "id": 4,
                     "id_to_left": 2,
-                    "timestamp": 1754673200333
+                    "timestamp": 1754713850625
                 }
             ]
         },
         "self_device_id": 0,
-        "timestamp": 22249.300000190735
+        "timestamp": 26843.5
     },
     {
         "type": "replay",
@@ -3560,8 +3560,8 @@ const transcript_2 = [
             {
                 "type": "compressed history",
                 "serialization": {
-                    "text": "t\u0014êÕìa\u0002\u0000A",
-                    "time": 1754673190000,
+                    "text": "t\u0014êõ¯a\u0002\u0000A",
+                    "time": 1754713845000,
                     "baseline": 2
                 },
                 "final_state": {
@@ -3581,7 +3581,7 @@ const transcript_2 = [
                                 "text": "A",
                                 "id": 2,
                                 "id_to_left": 0,
-                                "timestamp": 1754673194938
+                                "timestamp": 1754713846700
                             }
                         ]
                     }
@@ -3593,17 +3593,17 @@ const transcript_2 = [
                 "text": "B",
                 "id": 4,
                 "id_to_left": 2,
-                "timestamp": 1754673200333
+                "timestamp": 1754713850625
             },
             {
                 "type": "add",
                 "text": "C",
                 "id": 6,
                 "id_to_left": 4,
-                "timestamp": 1754673201169
+                "timestamp": 1754713850977
             }
         ],
-        "timestamp": 22249.60000038147
+        "timestamp": 26843.89999961853
     },
     {
         "type": "save_to_disk",
@@ -3626,8 +3626,8 @@ const transcript_2 = [
                 {
                     "type": "compressed history",
                     "serialization": {
-                        "text": "t\u0014êÕìa\u0002\u0000A",
-                        "time": 1754673190000,
+                        "text": "t\u0014êõ¯a\u0002\u0000A",
+                        "time": 1754713845000,
                         "baseline": 2
                     },
                     "final_state": {
@@ -3647,7 +3647,7 @@ const transcript_2 = [
                                     "text": "A",
                                     "id": 2,
                                     "id_to_left": 0,
-                                    "timestamp": 1754673194938
+                                    "timestamp": 1754713846700
                                 }
                             ]
                         }
@@ -3659,14 +3659,14 @@ const transcript_2 = [
                     "text": "B",
                     "id": 4,
                     "id_to_left": 2,
-                    "timestamp": 1754673200333
+                    "timestamp": 1754713850625
                 },
                 {
                     "type": "add",
                     "text": "C",
                     "id": 6,
                     "id_to_left": 4,
-                    "timestamp": 1754673201169
+                    "timestamp": 1754713850977
                 }
             ]
         },
@@ -3678,25 +3678,25 @@ const transcript_2 = [
                     "text": "A",
                     "id": 2,
                     "id_to_left": 0,
-                    "timestamp": 1754673194938
+                    "timestamp": 1754713846700
                 },
                 {
                     "type": "add",
                     "text": "B",
                     "id": 4,
                     "id_to_left": 2,
-                    "timestamp": 1754673200333
+                    "timestamp": 1754713850625
                 },
                 {
                     "type": "add",
                     "text": "C",
                     "id": 6,
                     "id_to_left": 4,
-                    "timestamp": 1754673201169
+                    "timestamp": 1754713850977
                 }
             ]
         },
-        "timestamp": 22249.900000572205
+        "timestamp": 26844.39999961853
     },
     {
         "type": "replay",
@@ -3706,24 +3706,24 @@ const transcript_2 = [
                 "id": 2,
                 "id_to_left": 0,
                 "text": "A",
-                "timestamp": 1754673190000
+                "timestamp": 1754713845000
             },
             {
                 "type": "add",
                 "id": 4,
                 "id_to_left": 2,
                 "text": "B",
-                "timestamp": 1754673200000
+                "timestamp": 1754713850000
             },
             {
                 "type": "add",
                 "id": 6,
                 "id_to_left": 4,
                 "text": "C",
-                "timestamp": 1754673200000
+                "timestamp": 1754713850000
             }
         ],
-        "timestamp": 22250.300000190735
+        "timestamp": 26845
     },
     {
         "type": "replay",
@@ -3731,8 +3731,8 @@ const transcript_2 = [
             {
                 "type": "compressed history",
                 "serialization": {
-                    "text": "t\u0014êÕìa\u0002\u0000A",
-                    "time": 1754673190000,
+                    "text": "t\u0014êõ¯a\u0002\u0000A",
+                    "time": 1754713845000,
                     "baseline": 2
                 },
                 "final_state": {
@@ -3752,7 +3752,7 @@ const transcript_2 = [
                                 "text": "A",
                                 "id": 2,
                                 "id_to_left": 0,
-                                "timestamp": 1754673194938
+                                "timestamp": 1754713846700
                             }
                         ]
                     }
@@ -3764,23 +3764,23 @@ const transcript_2 = [
                 "text": "B",
                 "id": 4,
                 "id_to_left": 2,
-                "timestamp": 1754673200333
+                "timestamp": 1754713850625
             },
             {
                 "type": "add",
                 "text": "C",
                 "id": 6,
                 "id_to_left": 4,
-                "timestamp": 1754673201169
+                "timestamp": 1754713850977
             }
         ],
-        "timestamp": 22250.60000038147
+        "timestamp": 26845.39999961853
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
-        "value": "t\u0014êÕìa\u0002\u0000Ata\u0002\u0000Ba\u0002\u0000C",
-        "timestamp": 22251.10000038147
+        "value": "t\u0014êõ¯a\u0002\u0000ATa\u0002\u0000Ba\u0002\u0000C",
+        "timestamp": 26846
     },
     {
         "type": "on_change",
@@ -3792,7 +3792,7 @@ const transcript_2 = [
             "new_value": "BC"
         },
         "device_id": 0,
-        "timestamp": 23269.10000038147
+        "timestamp": 27668.5
     },
     {
         "type": "normalize_dom_change",
@@ -3815,8 +3815,8 @@ const transcript_2 = [
                 {
                     "type": "compressed history",
                     "serialization": {
-                        "text": "t\u0014êÕìa\u0002\u0000A",
-                        "time": 1754673190000,
+                        "text": "t\u0014êõ¯a\u0002\u0000A",
+                        "time": 1754713845000,
                         "baseline": 2
                     },
                     "final_state": {
@@ -3836,7 +3836,7 @@ const transcript_2 = [
                                     "text": "A",
                                     "id": 2,
                                     "id_to_left": 0,
-                                    "timestamp": 1754673194938
+                                    "timestamp": 1754713846700
                                 }
                             ]
                         }
@@ -3848,14 +3848,14 @@ const transcript_2 = [
                     "text": "B",
                     "id": 4,
                     "id_to_left": 2,
-                    "timestamp": 1754673200333
+                    "timestamp": 1754713850625
                 },
                 {
                     "type": "add",
                     "text": "C",
                     "id": 6,
                     "id_to_left": 4,
-                    "timestamp": 1754673201169
+                    "timestamp": 1754713850977
                 }
             ]
         },
@@ -3874,26 +3874,26 @@ const transcript_2 = [
                     "text": "A",
                     "id": 2,
                     "id_to_left": 0,
-                    "timestamp": 1754673194938
+                    "timestamp": 1754713846700
                 },
                 {
                     "type": "add",
                     "text": "B",
                     "id": 4,
                     "id_to_left": 2,
-                    "timestamp": 1754673200333
+                    "timestamp": 1754713850625
                 },
                 {
                     "type": "add",
                     "text": "C",
                     "id": 6,
                     "id_to_left": 4,
-                    "timestamp": 1754673201169
+                    "timestamp": 1754713850977
                 }
             ]
         },
         "self_device_id": 0,
-        "timestamp": 23269.20000076294
+        "timestamp": 27668.5
     },
     {
         "type": "replay",
@@ -3901,8 +3901,8 @@ const transcript_2 = [
             {
                 "type": "compressed history",
                 "serialization": {
-                    "text": "t\u0014êÕìa\u0002\u0000A",
-                    "time": 1754673190000,
+                    "text": "t\u0014êõ¯a\u0002\u0000A",
+                    "time": 1754713845000,
                     "baseline": 2
                 },
                 "final_state": {
@@ -3922,7 +3922,7 @@ const transcript_2 = [
                                 "text": "A",
                                 "id": 2,
                                 "id_to_left": 0,
-                                "timestamp": 1754673194938
+                                "timestamp": 1754713846700
                             }
                         ]
                     }
@@ -3934,24 +3934,24 @@ const transcript_2 = [
                 "text": "B",
                 "id": 4,
                 "id_to_left": 2,
-                "timestamp": 1754673200333
+                "timestamp": 1754713850625
             },
             {
                 "type": "add",
                 "text": "C",
                 "id": 6,
                 "id_to_left": 4,
-                "timestamp": 1754673201169
+                "timestamp": 1754713850977
             },
             {
                 "type": "remove",
                 "text": "A",
                 "id": 8,
                 "deleted_id": 2,
-                "timestamp": 1754673202189
+                "timestamp": 1754713851802
             }
         ],
-        "timestamp": 23269.5
+        "timestamp": 27668.800000190735
     },
     {
         "type": "save_to_disk",
@@ -3970,8 +3970,8 @@ const transcript_2 = [
                 {
                     "type": "compressed history",
                     "serialization": {
-                        "text": "t\u0014êÕìa\u0002\u0000A",
-                        "time": 1754673190000,
+                        "text": "t\u0014êõ¯a\u0002\u0000A",
+                        "time": 1754713845000,
                         "baseline": 2
                     },
                     "final_state": {
@@ -3991,7 +3991,7 @@ const transcript_2 = [
                                     "text": "A",
                                     "id": 2,
                                     "id_to_left": 0,
-                                    "timestamp": 1754673194938
+                                    "timestamp": 1754713846700
                                 }
                             ]
                         }
@@ -4003,21 +4003,21 @@ const transcript_2 = [
                     "text": "B",
                     "id": 4,
                     "id_to_left": 2,
-                    "timestamp": 1754673200333
+                    "timestamp": 1754713850625
                 },
                 {
                     "type": "add",
                     "text": "C",
                     "id": 6,
                     "id_to_left": 4,
-                    "timestamp": 1754673201169
+                    "timestamp": 1754713850977
                 },
                 {
                     "type": "remove",
                     "text": "A",
                     "id": 8,
                     "deleted_id": 2,
-                    "timestamp": 1754673202189
+                    "timestamp": 1754713851802
                 }
             ]
         },
@@ -4029,32 +4029,32 @@ const transcript_2 = [
                     "text": "A",
                     "id": 2,
                     "id_to_left": 0,
-                    "timestamp": 1754673194938
+                    "timestamp": 1754713846700
                 },
                 {
                     "type": "remove",
                     "text": "A",
                     "id": 8,
                     "deleted_id": 2,
-                    "timestamp": 1754673202189
+                    "timestamp": 1754713851802
                 },
                 {
                     "type": "add",
                     "text": "B",
                     "id": 4,
                     "id_to_left": 2,
-                    "timestamp": 1754673200333
+                    "timestamp": 1754713850625
                 },
                 {
                     "type": "add",
                     "text": "C",
                     "id": 6,
                     "id_to_left": 4,
-                    "timestamp": 1754673201169
+                    "timestamp": 1754713850977
                 }
             ]
         },
-        "timestamp": 23269.900000572205
+        "timestamp": 27669.199999809265
     },
     {
         "type": "replay",
@@ -4064,31 +4064,31 @@ const transcript_2 = [
                 "id": 2,
                 "id_to_left": 0,
                 "text": "A",
-                "timestamp": 1754673190000
+                "timestamp": 1754713845000
             },
             {
                 "type": "remove",
                 "id": 8,
                 "deleted_id": 2,
                 "text": "A",
-                "timestamp": 1754673200000
+                "timestamp": 1754713850000
             },
             {
                 "type": "add",
                 "id": 4,
                 "id_to_left": 2,
                 "text": "B",
-                "timestamp": 1754673200000
+                "timestamp": 1754713850000
             },
             {
                 "type": "add",
                 "id": 6,
                 "id_to_left": 4,
                 "text": "C",
-                "timestamp": 1754673200000
+                "timestamp": 1754713850000
             }
         ],
-        "timestamp": 23270.300000190735
+        "timestamp": 27669.699999809265
     },
     {
         "type": "replay",
@@ -4096,8 +4096,8 @@ const transcript_2 = [
             {
                 "type": "compressed history",
                 "serialization": {
-                    "text": "t\u0014êÕìa\u0002\u0000A",
-                    "time": 1754673190000,
+                    "text": "t\u0014êõ¯a\u0002\u0000A",
+                    "time": 1754713845000,
                     "baseline": 2
                 },
                 "final_state": {
@@ -4117,7 +4117,7 @@ const transcript_2 = [
                                 "text": "A",
                                 "id": 2,
                                 "id_to_left": 0,
-                                "timestamp": 1754673194938
+                                "timestamp": 1754713846700
                             }
                         ]
                     }
@@ -4129,30 +4129,30 @@ const transcript_2 = [
                 "text": "B",
                 "id": 4,
                 "id_to_left": 2,
-                "timestamp": 1754673200333
+                "timestamp": 1754713850625
             },
             {
                 "type": "add",
                 "text": "C",
                 "id": 6,
                 "id_to_left": 4,
-                "timestamp": 1754673201169
+                "timestamp": 1754713850977
             },
             {
                 "type": "remove",
                 "text": "A",
                 "id": 8,
                 "deleted_id": 2,
-                "timestamp": 1754673202189
+                "timestamp": 1754713851802
             }
         ],
-        "timestamp": 23270.70000076294
+        "timestamp": 27670
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
-        "value": "t\u0014êÕìa\u0002\u0000Ata\u0002\u0000Ba\u0002\u0000Cr\u0002A",
-        "timestamp": 23271.20000076294
+        "value": "t\u0014êõ¯a\u0002\u0000ATa\u0002\u0000Ba\u0002\u0000Cr\u0002A",
+        "timestamp": 27670.599999427795
     },
     {
         "type": "handle_decrypted_message",
@@ -4164,19 +4164,19 @@ const transcript_2 = [
                     "text": "D",
                     "id": 5,
                     "id_to_left": 2,
-                    "timestamp": 1754671280267
+                    "timestamp": 1754713013173
                 },
                 {
                     "type": "add",
                     "text": "E",
                     "id": 7,
                     "id_to_left": 5,
-                    "timestamp": 1754671280528
+                    "timestamp": 1754713013363
                 }
             ]
         },
         "device_id": 0,
-        "timestamp": 25412.300000190735
+        "timestamp": 32169
     },
     {
         "type": "replay",
@@ -4184,8 +4184,8 @@ const transcript_2 = [
             {
                 "type": "compressed history",
                 "serialization": {
-                    "text": "t\u0014êÕìa\u0002\u0000A",
-                    "time": 1754673190000,
+                    "text": "t\u0014êõ¯a\u0002\u0000A",
+                    "time": 1754713845000,
                     "baseline": 2
                 },
                 "final_state": {
@@ -4205,7 +4205,7 @@ const transcript_2 = [
                                 "text": "A",
                                 "id": 2,
                                 "id_to_left": 0,
-                                "timestamp": 1754673194938
+                                "timestamp": 1754713846700
                             }
                         ]
                     }
@@ -4217,38 +4217,38 @@ const transcript_2 = [
                 "text": "B",
                 "id": 4,
                 "id_to_left": 2,
-                "timestamp": 1754673200333
+                "timestamp": 1754713850625
             },
             {
                 "type": "add",
                 "text": "C",
                 "id": 6,
                 "id_to_left": 4,
-                "timestamp": 1754673201169
+                "timestamp": 1754713850977
             },
             {
                 "type": "remove",
                 "text": "A",
                 "id": 8,
                 "deleted_id": 2,
-                "timestamp": 1754673202189
+                "timestamp": 1754713851802
             },
             {
                 "type": "add",
                 "text": "D",
                 "id": 5,
                 "id_to_left": 2,
-                "timestamp": 1754673204333
+                "timestamp": 1754713856303
             },
             {
                 "type": "add",
                 "text": "E",
                 "id": 7,
                 "id_to_left": 5,
-                "timestamp": 1754673204333
+                "timestamp": 1754713856303
             }
         ],
-        "timestamp": 25413
+        "timestamp": 32169.5
     },
     {
         "type": "save_to_disk",
@@ -4275,8 +4275,8 @@ const transcript_2 = [
                 {
                     "type": "compressed history",
                     "serialization": {
-                        "text": "t\u0014êÕìa\u0002\u0000A",
-                        "time": 1754673190000,
+                        "text": "t\u0014êõ¯a\u0002\u0000A",
+                        "time": 1754713845000,
                         "baseline": 2
                     },
                     "final_state": {
@@ -4296,7 +4296,7 @@ const transcript_2 = [
                                     "text": "A",
                                     "id": 2,
                                     "id_to_left": 0,
-                                    "timestamp": 1754673194938
+                                    "timestamp": 1754713846700
                                 }
                             ]
                         }
@@ -4308,35 +4308,35 @@ const transcript_2 = [
                     "text": "B",
                     "id": 4,
                     "id_to_left": 2,
-                    "timestamp": 1754673200333
+                    "timestamp": 1754713850625
                 },
                 {
                     "type": "add",
                     "text": "C",
                     "id": 6,
                     "id_to_left": 4,
-                    "timestamp": 1754673201169
+                    "timestamp": 1754713850977
                 },
                 {
                     "type": "remove",
                     "text": "A",
                     "id": 8,
                     "deleted_id": 2,
-                    "timestamp": 1754673202189
+                    "timestamp": 1754713851802
                 },
                 {
                     "type": "add",
                     "text": "D",
                     "id": 5,
                     "id_to_left": 2,
-                    "timestamp": 1754673204333
+                    "timestamp": 1754713856303
                 },
                 {
                     "type": "add",
                     "text": "E",
                     "id": 7,
                     "id_to_left": 5,
-                    "timestamp": 1754673204333
+                    "timestamp": 1754713856303
                 }
             ]
         },
@@ -4348,46 +4348,46 @@ const transcript_2 = [
                     "text": "A",
                     "id": 2,
                     "id_to_left": 0,
-                    "timestamp": 1754673194938
+                    "timestamp": 1754713846700
                 },
                 {
                     "type": "remove",
                     "text": "A",
                     "id": 8,
                     "deleted_id": 2,
-                    "timestamp": 1754673202189
+                    "timestamp": 1754713851802
                 },
                 {
                     "type": "add",
                     "text": "D",
                     "id": 5,
                     "id_to_left": 2,
-                    "timestamp": 1754673204333
+                    "timestamp": 1754713856303
                 },
                 {
                     "type": "add",
                     "text": "E",
                     "id": 7,
                     "id_to_left": 5,
-                    "timestamp": 1754673204333
+                    "timestamp": 1754713856303
                 },
                 {
                     "type": "add",
                     "text": "B",
                     "id": 4,
                     "id_to_left": 2,
-                    "timestamp": 1754673200333
+                    "timestamp": 1754713850625
                 },
                 {
                     "type": "add",
                     "text": "C",
                     "id": 6,
                     "id_to_left": 4,
-                    "timestamp": 1754673201169
+                    "timestamp": 1754713850977
                 }
             ]
         },
-        "timestamp": 25413.5
+        "timestamp": 32170.099999427795
     },
     {
         "type": "replay",
@@ -4397,45 +4397,45 @@ const transcript_2 = [
                 "id": 2,
                 "id_to_left": 0,
                 "text": "A",
-                "timestamp": 1754673190000
+                "timestamp": 1754713845000
             },
             {
                 "type": "remove",
                 "id": 8,
                 "deleted_id": 2,
                 "text": "A",
-                "timestamp": 1754673200000
+                "timestamp": 1754713850000
             },
             {
                 "type": "add",
                 "id": 5,
                 "id_to_left": 2,
                 "text": "D",
-                "timestamp": 1754673200000
+                "timestamp": 1754713855000
             },
             {
                 "type": "add",
                 "id": 7,
                 "id_to_left": 5,
                 "text": "E",
-                "timestamp": 1754673200000
+                "timestamp": 1754713855000
             },
             {
                 "type": "add",
                 "id": 4,
                 "id_to_left": 2,
                 "text": "B",
-                "timestamp": 1754673200000
+                "timestamp": 1754713850000
             },
             {
                 "type": "add",
                 "id": 6,
                 "id_to_left": 4,
                 "text": "C",
-                "timestamp": 1754673200000
+                "timestamp": 1754713850000
             }
         ],
-        "timestamp": 25413.900000572205
+        "timestamp": 32170.5
     },
     {
         "type": "replay",
@@ -4443,8 +4443,8 @@ const transcript_2 = [
             {
                 "type": "compressed history",
                 "serialization": {
-                    "text": "t\u0014êÕìa\u0002\u0000A",
-                    "time": 1754673190000,
+                    "text": "t\u0014êõ¯a\u0002\u0000A",
+                    "time": 1754713845000,
                     "baseline": 2
                 },
                 "final_state": {
@@ -4464,7 +4464,7 @@ const transcript_2 = [
                                 "text": "A",
                                 "id": 2,
                                 "id_to_left": 0,
-                                "timestamp": 1754673194938
+                                "timestamp": 1754713846700
                             }
                         ]
                     }
@@ -4476,44 +4476,44 @@ const transcript_2 = [
                 "text": "B",
                 "id": 4,
                 "id_to_left": 2,
-                "timestamp": 1754673200333
+                "timestamp": 1754713850625
             },
             {
                 "type": "add",
                 "text": "C",
                 "id": 6,
                 "id_to_left": 4,
-                "timestamp": 1754673201169
+                "timestamp": 1754713850977
             },
             {
                 "type": "remove",
                 "text": "A",
                 "id": 8,
                 "deleted_id": 2,
-                "timestamp": 1754673202189
+                "timestamp": 1754713851802
             },
             {
                 "type": "add",
                 "text": "D",
                 "id": 5,
                 "id_to_left": 2,
-                "timestamp": 1754673204333
+                "timestamp": 1754713856303
             },
             {
                 "type": "add",
                 "text": "E",
                 "id": 7,
                 "id_to_left": 5,
-                "timestamp": 1754673204333
+                "timestamp": 1754713856303
             }
         ],
-        "timestamp": 25414.20000076294
+        "timestamp": 32170.89999961853
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
-        "value": "t\u0014êÕìa\u0002\u0000Ata\u0002\u0000Ba\u0001Da\u0001Ca\u0001Er\u0001A",
-        "timestamp": 25414.70000076294
+        "value": "t\u0014êõ¯a\u0002\u0000ATa\u0002\u0000Ba\u0002\u0000Cr\u0002ATaDa\u0002\u0000E",
+        "timestamp": 32171.300000190735
     },
     {
         "type": "handle_decrypted_message",
@@ -4522,7 +4522,7 @@ const transcript_2 = [
             "value": 8
         },
         "device_id": 0,
-        "timestamp": 25660.60000038147
+        "timestamp": 32403.89999961853
     },
     {
         "type": "replay",
@@ -4530,8 +4530,8 @@ const transcript_2 = [
             {
                 "type": "compressed history",
                 "serialization": {
-                    "text": "t\u0014êÕìa\u0002\u0000A",
-                    "time": 1754673190000,
+                    "text": "t\u0014êõ¯a\u0002\u0000A",
+                    "time": 1754713845000,
                     "baseline": 2
                 },
                 "final_state": {
@@ -4551,7 +4551,7 @@ const transcript_2 = [
                                 "text": "A",
                                 "id": 2,
                                 "id_to_left": 0,
-                                "timestamp": 1754673194938
+                                "timestamp": 1754713846700
                             }
                         ]
                     }
@@ -4563,37 +4563,37 @@ const transcript_2 = [
                 "text": "B",
                 "id": 4,
                 "id_to_left": 2,
-                "timestamp": 1754673200333
+                "timestamp": 1754713850625
             },
             {
                 "type": "add",
                 "text": "C",
                 "id": 6,
                 "id_to_left": 4,
-                "timestamp": 1754673201169
+                "timestamp": 1754713850977
             },
             {
                 "type": "remove",
                 "text": "A",
                 "id": 8,
                 "deleted_id": 2,
-                "timestamp": 1754673202189
+                "timestamp": 1754713851802
             },
             {
                 "type": "add",
                 "text": "D",
                 "id": 5,
                 "id_to_left": 2,
-                "timestamp": 1754673204333
+                "timestamp": 1754713856303
             },
             {
                 "type": "add",
                 "text": "E",
                 "id": 7,
                 "id_to_left": 5,
-                "timestamp": 1754673204333
+                "timestamp": 1754713856303
             }
         ],
-        "timestamp": 25660.70000076294
+        "timestamp": 32404
     }
 ];
