@@ -15,7 +15,7 @@
 //  return window.SimplePeer;
 //};
 
-const ENABLE_SIMULATION = false;
+const ENABLE_SIMULATION = true;
 
 const sleep = (millis) => (new Promise((resolve, reject) => (setTimeout(resolve, millis))));
 
@@ -598,6 +598,8 @@ const cleanup_causal_tree = (causal_tree) => {
 };
 
 const cleanup_history = ({cutoff_id, main_data}) => {
+  const call_record = JSON.parse(JSON.stringify({type: 'cleanup_history', cutoff_id, main_data}));
+  record_for_testing(call_record);
   const partial_history = main_data.history.filter((x) => (x.id <= cutoff_id));
   const serialization = serialize(partial_history);
   const replayed = replay(partial_history);
@@ -614,7 +616,8 @@ const cleanup_history = ({cutoff_id, main_data}) => {
     },
     id: cutoff_id,
   }, ...remaining_history];
-  console.log({new_history});
+  console.log(JSON.parse(JSON.stringify({cutoff_id, main_data, new_history})));
+  record_for_testing({type: 'output', call_record, output: JSON.parse(JSON.stringify(new_history))});
   main_data.history.splice(0, main_data.history.length, ...new_history);
 };
 
