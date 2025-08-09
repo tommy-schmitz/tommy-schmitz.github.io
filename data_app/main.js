@@ -589,6 +589,7 @@ const cleanup_causal_tree = (causal_tree) => {
   for(const op of causal_tree)
     if(op.type === 'remove')
       deleted[op.deleted_id] = 1;
+
   const heir = {0: 0};
   const needs_heir = [];
   for(let i=causal_tree.length-1; i>=0; --i) {
@@ -604,11 +605,23 @@ const cleanup_causal_tree = (causal_tree) => {
       }
     }
   }
+  for(const id of needs_heir)
+    heir[id] = 0;
+
   const result = [];
   for(let i=0; i<causal_tree.length; ++i)
     if(causal_tree[i].type === 'add'  &&  !deleted[causal_tree[i].id])
       result.push({...causal_tree[i], id_to_left: heir[causal_tree[i].id_to_left]});
   console.log('cleanup_causal_tree', JSON.parse(JSON.stringify({causal_tree, heir, result})));
+
+  // Sanity check:
+  for(const op of result) {
+    if(op.type === 'add'  &&  op.id_to_left === undefined)
+      throw notify(1259);
+    if(op.type === 'remove'  &&  op.deleted_id === undefined)
+      throw notify(1260);
+  }
+
   return result;
 };
 
@@ -1109,6 +1122,8 @@ const main = async() => {
 
     if(parsed.type === 'changes') {
       handle_network_operations_(parsed.value);
+      if(parsed.highest_id_received === undefined)
+        throw notify(1258);
       cleanup_history({cutoff_id: parsed.highest_id_received, main_data});
     } else if(parsed.type === 'ack') {
       handle_ack({to_be_sent, ack: parsed.value, main_data});
