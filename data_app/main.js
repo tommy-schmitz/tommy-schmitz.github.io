@@ -1060,10 +1060,13 @@ const make_feedback_div = () => {
   return {set_feedback_message, feedback_div};
 };
 
-const initialize_network_manager = ({send_encrypted_data}) => {
+const initialize_network_manager = ({send_encrypted_data, self_device_id}) => {
   let highest_ack_sent = 0;
   const to_be_sent = [];
   (async() => {
+    if(self_device_id === 1)
+      await sleep(3500);
+
     while(true) {
       console.log('syncing');
       const ack = highest_id_received_state.get();
@@ -1152,7 +1155,7 @@ const main = async() => {
   if(ENABLE_SIMULATION)
     harness.simulate();
 
-  const {network_buffer: to_be_sent} = initialize_network_manager({send_encrypted_data});
+  const {network_buffer: to_be_sent} = initialize_network_manager({send_encrypted_data, self_device_id});
 
   let ephemeral_data = {clock: 0, causal_tree: []};
   let main_data = {current: [], history: []};
