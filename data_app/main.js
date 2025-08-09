@@ -15,7 +15,7 @@
 //  return window.SimplePeer;
 //};
 
-const ENABLE_SIMULATION = true;
+const ENABLE_SIMULATION = false;
 
 const sleep = (millis) => (new Promise((resolve, reject) => (setTimeout(resolve, millis))));
 
