@@ -19,9 +19,20 @@ const ENABLE_SIMULATION = false;
 
 const sleep = (millis) => (new Promise((resolve, reject) => (setTimeout(resolve, millis))));
 
+const time_now = (() => {
+  let counter = 1754700000000;
+
+  return () => {
+    const result = counter;
+    counter += 100;
+    return result;
+  };
+})();
+
 window.event_log_for_testing = [];
 
 const record_for_testing = (stuff) => {
+  //const timestamp = Date.now();
   const timestamp = performance.now();
   window.event_log_for_testing.push({...stuff, timestamp});
 };
@@ -38,7 +49,7 @@ const harness = (() => {
     for(const item of transcript_for_testing) {
       if(item.device_id === 0) {
         if(item.type === 'on_change'  ||  item.type === 'handle_decrypted_message') {
-          const now = performance.now();
+          const now = performance.now();  // TODO: change this after doing the next recording
           if(now < item.timestamp)
             await sleep(item.timestamp - now);
         }
@@ -56,12 +67,20 @@ const harness = (() => {
   return {register, simulate};
 })();
 
+const suppress_timestamps = (transcript) => {
+  return transcript.map(({timestamp, ...item}) => {
+    return item;
+  });
+};
+
 const diff_transcripts = () => {
   //console.log(JSON_diff([1,{x:1,y:2},3,4], [1,{x:1,y:3},2]));
   //console.log(JSON_intersection([1,{x:1,y:2},3,4], [1,{x:1,y:3},2]));
-  const transcript_1 = transcript_for_testing.filter((x) => (x.device_id !== 1));
-  console.log('diff', JSON_diff(transcript_1, transcript_2));
-  console.log('intersection', JSON_intersection(transcript_1, transcript_2));
+  //const transcript_1 = transcript_for_testing.filter((x) => (x.device_id !== 1));
+  const t_1 = suppress_timestamps(transcript_for_testing);
+  const t_2 = suppress_timestamps(transcript_2);
+  console.log('diff', JSON_diff(t_1, t_2));
+  console.log('intersection', JSON_intersection(t_1, t_2));
 };
 diff_transcripts();
 
@@ -416,7 +435,7 @@ const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: li
 
   // Transmit transient public key:
   {
-    const data = {public_key: await export_public_key(temp_keys.publicKey), timestamp: Date.now()};
+    const data = {public_key: await export_public_key(temp_keys.publicKey), timestamp: time_now()};
     sock.emit('interlocutor should hear', {type: 'set public key', data, signature: await digitally_sign(master_private_key, data)});
   }
 
@@ -434,7 +453,7 @@ const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: li
 };
 
 const sanitize_change = ({untrusted_change, self_device_id}) => {
-  const timestamp = Date.now();  // TODO: Currently, timestamps created by interlocutor while disconnected are completely distrusted.
+  const timestamp = time_now();  // TODO: Currently, timestamps created by interlocutor while disconnected are completely distrusted.
                                  //       Probably worth considering trusting them. At least to an extent.
   if(untrusted_change.type === 'add') {
     const clock = untrusted_change.id;
@@ -659,7 +678,7 @@ const normalize_dom_change = ({main_data, change, ephemeral_data, self_device_id
   const call_record = JSON.parse(JSON.stringify({type: 'normalize_dom_change', main_data, change, ephemeral_data, self_device_id}));
   record_for_testing(call_record);
 
-  const timestamp = Date.now();
+  const timestamp = time_now();
   const params = JSON.parse(JSON.stringify({main_data, change, ephemeral_data, self_device_id}));
   const result = [];
   const {prev_value, removed, inserted, index, new_value} = change;
@@ -982,7 +1001,7 @@ const compute_initial_text = async({send_encrypted_data, self_device_id, interlo
 };
 
 const spawn_animation_frame_loop = (callback) => {
-  let previous_timestamp = Date.now();
+  let previous_timestamp = performance.now();
   const f = (new_timestamp) => {
     const elapsed = new_timestamp - previous_timestamp;
     previous_timestamp = new_timestamp;
@@ -1079,7 +1098,7 @@ const main = async() => {
 
   const handle_decrypted_message = ((ENABLE_SIMULATION) ? () => {} : handle_decrypted_message_);
 
-  harness.register({handle_decrypted_message});
+  harness.register({handle_decrypted_message: handle_decrypted_message_});
 
   const {send_encrypted_data, self_device_id} = await get_encrypted_channel({ui, socket_io, interlocutor_latest_history,
                                                                              handle_decrypted_message                   });
