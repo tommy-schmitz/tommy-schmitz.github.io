@@ -5,7 +5,7 @@ const make_textarea = ({on_change, on_undo, on_redo}) => {
   let end;
   textarea.addEventListener('beforeinput', (ev) => {
     const call_record = {type: 'beforeinput', value: ev.target.value, selection_start: ev.target.selectionStart, selection_end: ev.target.selectionEnd, input_type: ev.inputType};
-    record_for_testing(call_record);
+//    record_for_testing(call_record);
 
     const real_logic = ({value, selection_start, selection_end, input_type}) => {
       //console.log({ev, value: ev.target.value, target_ranges: ev.getTargetRanges(), selection_start: ev.target.selectionStart, inputType: ev.inputType});
@@ -19,7 +19,7 @@ const make_textarea = ({on_change, on_undo, on_redo}) => {
     };
 
     const output = real_logic(call_record);
-    record_for_testing({type: 'output', call_record, output});
+//    record_for_testing({type: 'output', call_record, output});
     ({start, end} = output);
   });
   textarea.addEventListener('input', (e) => {

@@ -15,9 +15,55 @@
 //  return window.SimplePeer;
 //};
 
+const ENABLE_SIMULATION = false;
+
+const sleep = (millis) => (new Promise((resolve, reject) => (setTimeout(resolve, millis))));
+
+window.event_log_for_testing = [];
+
 const record_for_testing = (stuff) => {
-  console.log('record_for_testing', stuff);
+  const timestamp = performance.now();
+  window.event_log_for_testing.push({...stuff, timestamp});
 };
+
+const harness = (() => {
+  const simulator = {};
+
+  const register = (item) => {
+    for(const key in item)
+      simulator[key] = item[key];
+  };
+
+  const simulate = async() => {
+    for(const item of transcript_for_testing) {
+      if(item.device_id === 0) {
+        if(item.type === 'on_change'  ||  item.type === 'handle_decrypted_message') {
+          const now = performance.now();
+          if(now < item.timestamp)
+            await sleep(item.timestamp - now);
+        }
+        if(item.type === 'on_change') {
+          simulator.on_change(item.change);
+          simulator.set_textarea_value(item.change.new_value);
+        }
+        if(item.type === 'handle_decrypted_message')
+          simulator.handle_decrypted_message(item);
+      }
+      console.log('Simulated ', item.type, item);
+    }
+  };
+
+  return {register, simulate};
+})();
+
+const diff_transcripts = () => {
+  //console.log(JSON_diff([1,{x:1,y:2},3,4], [1,{x:1,y:3},2]));
+  //console.log(JSON_intersection([1,{x:1,y:2},3,4], [1,{x:1,y:3},2]));
+  const transcript_1 = transcript_for_testing.filter((x) => (x.device_id !== 1));
+  console.log('diff', JSON_diff(transcript_1, transcript_2));
+  console.log('intersection', JSON_intersection(transcript_1, transcript_2));
+};
+diff_transcripts();
 
 const initialize_socket_io = async() => {
   console.log('initializing "socket.io"');
@@ -36,8 +82,6 @@ const initialize_socket_io = async() => {
   return window.io;
 };
 
-const sleep = (millis) => (new Promise((resolve, reject) => (setTimeout(resolve, millis))));
-
 const make_resolvable_promise = () => {
   let resolve = null;
   let reject = null;
@@ -48,66 +92,66 @@ const make_resolvable_promise = () => {
   return {promise, resolve, reject};
 };
 
-// This function make_stable_string() is (decently well) optimized for performance. Instead of readability.
-const make_stable_string = (json_value) => {
-  let indent_level = 0;
-  const state = ['done', json_value, 'json'];
-  const reverser = [];
-  let result = '';
-  for(;;) {
-    const top = state.pop();
-    if(top === 'json') {
-      const top2 = state.pop();
-      if(Array.isArray(top2)) {
-        state.push(']', 'text', 'indent', 'decrement indent level');
-        for(let i=0; i<top2.length; ++i) {
-          const v2 = top2[top2.length - 1 - i];
-          if(i > 0)
-            state.push(',\n');
-          else
-            state.push('\n');
-          state.push('text', v2, 'json', 'indent');
-        }
-        state.push('[\n', 'text', 'increment indent level');
-      } else if(top2 === null) {
-        result += 'null';
-      } else if(typeof top2 === 'object') {
-        state.push('}', 'text', 'indent', 'decrement indent level');
-        for(const key of Object.keys(top2).sort())
-          reverser.push(key);
-        const original_length = reverser.length;
-        while(reverser.length > 0) {
-          const key = reverser.pop();
-          const v2 = (top2)[key];
-          if(reverser.length === original_length-1)
-            state.push('\n');
-          else
-            state.push(',\n');
-          state.push('text', v2, 'json', `${JSON.stringify(key)}: `, 'text', 'indent');
-        }
-        state.push('{\n', 'text', 'increment indent level');
-      } else {
-        result += JSON.stringify(top2);
-      }
-    } else if(top === 'text') {
-      result += state.pop();
-    } else if(top === 'decrement indent level') {
-      --indent_level;
-    } else if(top === 'indent') {
-      for(let i=0; i<indent_level; ++i)
-        result += '  ';
-    } else if(top === 'increment indent level') {
-      ++indent_level;
-    } else if(top === 'done') {
-      break;
-    } else {
-      const unreachable = top;
-      console.log(top);
-      throw new Error('assertion failed');
-    }
-  }
-  return result;
-};
+//// This function make_stable_string() is (decently well) optimized for performance. Instead of readability.
+//const make_stable_string = (json_value) => {
+//  let indent_level = 0;
+//  const state = ['done', json_value, 'json'];
+//  const reverser = [];
+//  let result = '';
+//  for(;;) {
+//    const top = state.pop();
+//    if(top === 'json') {
+//      const top2 = state.pop();
+//      if(Array.isArray(top2)) {
+//        state.push(']', 'text', 'indent', 'decrement indent level');
+//        for(let i=0; i<top2.length; ++i) {
+//          const v2 = top2[top2.length - 1 - i];
+//          if(i > 0)
+//            state.push(',\n');
+//          else
+//            state.push('\n');
+//          state.push('text', v2, 'json', 'indent');
+//        }
+//        state.push('[\n', 'text', 'increment indent level');
+//      } else if(top2 === null) {
+//        result += 'null';
+//      } else if(typeof top2 === 'object') {
+//        state.push('}', 'text', 'indent', 'decrement indent level');
+//        for(const key of Object.keys(top2).sort())
+//          reverser.push(key);
+//        const original_length = reverser.length;
+//        while(reverser.length > 0) {
+//          const key = reverser.pop();
+//          const v2 = (top2)[key];
+//          if(reverser.length === original_length-1)
+//            state.push('\n');
+//          else
+//            state.push(',\n');
+//          state.push('text', v2, 'json', `${JSON.stringify(key)}: `, 'text', 'indent');
+//        }
+//        state.push('{\n', 'text', 'increment indent level');
+//      } else {
+//        result += JSON.stringify(top2);
+//      }
+//    } else if(top === 'text') {
+//      result += state.pop();
+//    } else if(top === 'decrement indent level') {
+//      --indent_level;
+//    } else if(top === 'indent') {
+//      for(let i=0; i<indent_level; ++i)
+//        result += '  ';
+//    } else if(top === 'increment indent level') {
+//      ++indent_level;
+//    } else if(top === 'done') {
+//      break;
+//    } else {
+//      const unreachable = top;
+//      console.log(top);
+//      throw new Error('assertion failed');
+//    }
+//  }
+//  return result;
+//};
 
 const initialize_ui = async() => {
   await page_load_promise;
@@ -883,9 +927,9 @@ const save_to_disk = ({main_data, ephemeral_data}) => {
   }
 
   {
-    const call_record = {type: 'localStorage.setItem', key: 'main_text_box_history', data: serialized};
+    const call_record = {type: 'localStorage.setItem', key: 'main_text_box_history', value: serialized};
     record_for_testing(call_record);
-    localStorage.setItem(call_record.key, call_record.data);
+    localStorage.setItem(call_record.key, call_record.value);
   }
 };
 
@@ -918,7 +962,14 @@ const save_replay = ({replayed, main_data: data, ephemeral_data}) => {
 };
 
 const compute_initial_text = async({send_encrypted_data, self_device_id, interlocutor_latest_history, main_data: data, ephemeral_data}) => {
-  const stored = localStorage.getItem('main_text_box_history');
+  const stored = (() => {
+    if(ENABLE_SIMULATION) {
+      return transcript_for_testing.find((x) => (x.type === 'localStorage.getItem'  &&  x.key === 'main_text_box_history')).value;
+    } else {
+      return localStorage.getItem('main_text_box_history');
+    }
+  })();
+  record_for_testing({type: 'localStorage.getItem', key: 'main_text_box_history', value: stored, device_id: self_device_id});
   const stored_history = ((stored === null) ? [] : deserialize(stored));
   send_encrypted_data({type: 'latest clock', value: get_latest_id({history: stored_history, self_device_id})});  // asynchronous action
   const other_latest_history_id = await interlocutor_latest_history.promise;
@@ -931,7 +982,7 @@ const compute_initial_text = async({send_encrypted_data, self_device_id, interlo
 };
 
 const spawn_animation_frame_loop = (callback) => {
-  let previous_timestamp = performance.now();
+  let previous_timestamp = Date.now();
   const f = (new_timestamp) => {
     const elapsed = new_timestamp - previous_timestamp;
     previous_timestamp = new_timestamp;
@@ -1008,32 +1059,37 @@ const main = async() => {
     handle_network_operations({changes, send_encrypted_data, textarea, main_data, self_device_id, set_textarea_value, ephemeral_data});
   };
 
-  const {send_encrypted_data, self_device_id} = await get_encrypted_channel({
-    ui,
-    socket_io,
-    interlocutor_latest_history,
-    handle_decrypted_message: ({message: parsed}) => {
-      record_for_testing({type: 'handle_decrypted_message', message: parsed});
+  const handle_decrypted_message_ = ({message: parsed}) => {
+    record_for_testing({type: 'handle_decrypted_message', message: parsed, device_id: self_device_id});
 
-      if(parsed.type === 'changes') {
-        handle_network_operations_(parsed.value);
-      } else if(parsed.type === 'ack') {
-        handle_ack({to_be_sent, ack: parsed.value, main_data});
-      } else if(parsed.type === 'latest clock') {
-        interlocutor_latest_history.resolve(parsed.value);
-      } else if(parsed.type === 'latest history') {
-        console.log('Received operations:', parsed.value);
-        handle_network_operations_(parsed.value);
-        done_processing_latest_history.resolve();
-      } else {
-        console.warn('Unrecognized message type (2):', parsed.type);
-      }
-    },
-  });
+    if(parsed.type === 'changes') {
+      handle_network_operations_(parsed.value);
+    } else if(parsed.type === 'ack') {
+      handle_ack({to_be_sent, ack: parsed.value, main_data});
+    } else if(parsed.type === 'latest clock') {
+      interlocutor_latest_history.resolve(parsed.value);
+    } else if(parsed.type === 'latest history') {
+      console.log('Received operations:', parsed.value);
+      handle_network_operations_(parsed.value);
+      done_processing_latest_history.resolve();
+    } else {
+      console.warn('Unrecognized message type (2):', parsed.type);
+    }
+  };
+
+  const handle_decrypted_message = ((ENABLE_SIMULATION) ? () => {} : handle_decrypted_message_);
+
+  harness.register({handle_decrypted_message});
+
+  const {send_encrypted_data, self_device_id} = await get_encrypted_channel({ui, socket_io, interlocutor_latest_history,
+                                                                             handle_decrypted_message                   });
 
   ui.main_page_body.innerText = 'Connection established. Loading initial data ...';
 
   console.log({self_device_id});
+
+  if(ENABLE_SIMULATION)
+    harness.simulate();
 
   const {network_buffer: to_be_sent} = initialize_network_manager({send_encrypted_data});
 
@@ -1046,19 +1102,23 @@ const main = async() => {
 
   const {set_feedback_message, feedback_div} = make_feedback_div();
 
+  const on_change = (change) => {
+    const call_record = {type: 'on_change', change, device_id: self_device_id};
+    record_for_testing(call_record);
+    const normalizeds = normalize_dom_change({main_data, change, ephemeral_data, self_device_id});
+    for(const operation of normalizeds) {
+      to_be_sent.push(operation);
+      main_data.history.push(operation);
+    }
+    const replayed = replay(main_data.history);
+    save_replay({replayed, main_data, ephemeral_data});
+    save_to_disk({main_data, ephemeral_data});
+  };
+
+  harness.register({on_change});
+
   const {textarea, set_value: set_textarea_value} = make_textarea({
-    on_change: (change) => {
-      const call_record = {type: 'on_change', change};
-      record_for_testing(call_record);
-      const normalizeds = normalize_dom_change({main_data, change, ephemeral_data, self_device_id});
-      for(const operation of normalizeds) {
-        to_be_sent.push(operation);
-        main_data.history.push(operation);
-      }
-      const replayed = replay(main_data.history);
-      save_replay({replayed, main_data, ephemeral_data});
-      save_to_disk({main_data, ephemeral_data});
-    },
+    on_change,
 
     // TODO: implement proper undo and redo in this portion of the code
     // For now, we'll just disable:
@@ -1069,6 +1129,8 @@ const main = async() => {
       set_feedback_message("Undo/redo functionality hasn't been implemented yet and is currently disabled. Sorry!");
     },
   });
+
+  harness.register({set_textarea_value});
 
   set_textarea_value(initial_text);
 
