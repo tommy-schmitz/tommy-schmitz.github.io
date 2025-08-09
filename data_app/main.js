@@ -37,6 +37,8 @@ const record_for_testing = (stuff) => {
 };
 
 const harness = (() => {
+  const transcript = transcript_for_testing;
+
   const simulator = {};
 
   const register = (item) => {
@@ -45,10 +47,10 @@ const harness = (() => {
   };
 
   const simulate = async() => {
-    for(const item of transcript_for_testing) {
+    for(const item of transcript) {
       if(item.device_id === 0) {
         if(item.type === 'on_change'  ||  item.type === 'handle_decrypted_message') {
-          const now = transcript_for_testing[0].timestamp - 4000 + performance.now();
+          const now = transcript[0].timestamp - 4000 + performance.now();
           if(now < item.timestamp)
             await sleep(item.timestamp - now);
         }
@@ -65,7 +67,7 @@ const harness = (() => {
     diff_transcripts(undefined, window.event_log_for_testing);
   };
 
-  return {register, simulate};
+  return {register, simulate, transcript};
 })();
 
 const suppress_timestamps = (transcript) => {
@@ -1009,7 +1011,7 @@ const save_replay = ({replayed, main_data: data, ephemeral_data}) => {
 const compute_initial_text = async({send_encrypted_data, self_device_id, interlocutor_latest_history, main_data: data, ephemeral_data}) => {
   const stored = (() => {
     if(ENABLE_SIMULATION) {
-      return transcript_for_testing.find((x) => (x.type === 'localStorage.getItem'  &&  x.key === 'main_text_box_history')).value;
+      return harness.transcript.find((x) => (x.type === 'localStorage.getItem'  &&  x.key === 'main_text_box_history')).value;
     } else {
       return localStorage.getItem('main_text_box_history');
     }
