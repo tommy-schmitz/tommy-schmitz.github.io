@@ -1081,7 +1081,8 @@ const initialize_network_manager = ({send_encrypted_data, self_device_id}) => {
       const ack = highest_id_received_state.get();
       if(to_be_sent.length > 0  ||  highest_ack_sent < ack) {
         await send_encrypted_data({type: 'changes', value: to_be_sent, highest_id_received: ack});
-        highest_id_sent_state.set(to_be_sent.slice(-1)[0].id);
+        if(to_be_sent.length > 0)
+          highest_id_sent_state.set(to_be_sent.slice(-1)[0].id);
         highest_ack_sent = ack;
       }
       await sleep(7000);
