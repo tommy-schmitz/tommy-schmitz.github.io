@@ -15,7 +15,9 @@
 //  return window.SimplePeer;
 //};
 
-const ENABLE_TIMESTAMP_REPLACEMENT = true;
+const ENABLE_SLOWER_SYNCHRONIZATION = false;
+
+const ENABLE_TIMESTAMP_REPLACEMENT = false;
 
 const ENABLE_SIMULATION = false;
 
@@ -1073,7 +1075,7 @@ const initialize_network_manager = ({send_encrypted_data, self_device_id}) => {
   let highest_ack_sent = 0;
   const to_be_sent = [];
   (async() => {
-    if(self_device_id === 1)
+    if(ENABLE_SLOWER_SYNCHRONIZATION  &&  self_device_id === 1)
       await sleep(3500);
 
     while(true) {
@@ -1085,7 +1087,7 @@ const initialize_network_manager = ({send_encrypted_data, self_device_id}) => {
           highest_id_sent_state.set(to_be_sent.slice(-1)[0].id);
         highest_ack_sent = ack;
       }
-      await sleep(7000);
+      await sleep((ENABLE_SLOWER_SYNCHRONIZATION) ? 7000 : 1000);
     }
   })();
   return {network_buffer: to_be_sent};
