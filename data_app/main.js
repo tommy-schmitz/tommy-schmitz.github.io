@@ -80,7 +80,7 @@ const diff_transcripts = (transcript_1 = transcript_for_testing, transcript_2_ =
   //console.log(JSON_diff([1,{x:1,y:2},3,4], [1,{x:1,y:3},2]));
   //console.log(JSON_intersection([1,{x:1,y:2},3,4], [1,{x:1,y:3},2]));
   //const transcript_1 = transcript_for_testing.filter((x) => (x.device_id !== 1));
-  const t_1 = suppress_timestamps(transcript_for_testing);
+  const t_1 = suppress_timestamps(transcript_1);
   const t_2 = suppress_timestamps(transcript_2_);
   console.log('diff', JSON_diff(t_1, t_2));
   console.log('intersection', JSON_intersection(t_1, t_2));
