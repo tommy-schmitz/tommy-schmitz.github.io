@@ -4093,7 +4093,7 @@ const transcript_2 = [
         "key": "main_text_box_history",
         "value": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000A",
         "device_id": 0,
-        "timestamp": 1754715532906
+        "timestamp": 1754717097437
     },
     {
         "type": "handle_decrypted_message",
@@ -4102,7 +4102,7 @@ const transcript_2 = [
             "value": 4
         },
         "device_id": 0,
-        "timestamp": 1754715533404
+        "timestamp": 1754717099072
     },
     {
         "type": "replay",
@@ -4122,7 +4122,7 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754715533406
+        "timestamp": 1754717099073
     },
     {
         "type": "handle_decrypted_message",
@@ -4131,7 +4131,7 @@ const transcript_2 = [
             "value": []
         },
         "device_id": 0,
-        "timestamp": 1754715533580
+        "timestamp": 1754717099246
     },
     {
         "type": "replay",
@@ -4151,7 +4151,7 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754715533581
+        "timestamp": 1754717099247
     },
     {
         "type": "save_to_disk",
@@ -4193,7 +4193,7 @@ const transcript_2 = [
                 }
             ]
         },
-        "timestamp": 1754715533582
+        "timestamp": 1754717099248
     },
     {
         "type": "replay",
@@ -4213,7 +4213,7 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754715533583
+        "timestamp": 1754717099249
     },
     {
         "type": "replay",
@@ -4233,13 +4233,13 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754715533584
+        "timestamp": 1754717099249
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
         "value": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000A",
-        "timestamp": 1754715533585
+        "timestamp": 1754717099251
     },
     {
         "type": "handle_decrypted_message",
@@ -4248,12 +4248,97 @@ const transcript_2 = [
             "value": 0
         },
         "device_id": 0,
-        "timestamp": 1754715533759
+        "timestamp": 1754717099426
+    },
+    {
+        "type": "cleanup_history",
+        "cutoff_id": 0,
+        "main_data": {
+            "current": [],
+            "history": [
+                {
+                    "type": "add",
+                    "id": 2,
+                    "id_to_left": 0,
+                    "text": "A",
+                    "timestamp": 1754700000000
+                },
+                {
+                    "type": "remove",
+                    "id": 4,
+                    "deleted_id": 2,
+                    "text": "A",
+                    "timestamp": 1754700000000
+                }
+            ]
+        },
+        "timestamp": 1754717099426
     },
     {
         "type": "replay",
         "history": [],
-        "timestamp": 1754715533759
+        "timestamp": 1754717099426
+    },
+    {
+        "type": "output",
+        "call_record": {
+            "type": "cleanup_history",
+            "cutoff_id": 0,
+            "main_data": {
+                "current": [],
+                "history": [
+                    {
+                        "type": "add",
+                        "id": 2,
+                        "id_to_left": 0,
+                        "text": "A",
+                        "timestamp": 1754700000000
+                    },
+                    {
+                        "type": "remove",
+                        "id": 4,
+                        "deleted_id": 2,
+                        "text": "A",
+                        "timestamp": 1754700000000
+                    }
+                ]
+            }
+        },
+        "output": [
+            {
+                "type": "compressed history",
+                "serialization": {
+                    "text": "",
+                    "time": 0,
+                    "baseline": 0
+                },
+                "final_state": {
+                    "state_1": {
+                        "current": []
+                    },
+                    "state_2": {
+                        "clock": 0,
+                        "causal_tree": []
+                    }
+                },
+                "id": 0
+            },
+            {
+                "type": "add",
+                "id": 2,
+                "id_to_left": 0,
+                "text": "A",
+                "timestamp": 1754700000000
+            },
+            {
+                "type": "remove",
+                "id": 4,
+                "deleted_id": 2,
+                "text": "A",
+                "timestamp": 1754700000000
+            }
+        ],
+        "timestamp": 1754717099427
     },
     {
         "type": "on_change",
@@ -4265,7 +4350,7 @@ const transcript_2 = [
             "new_value": "A"
         },
         "device_id": 0,
-        "timestamp": 1754715535959
+        "timestamp": 1754717101626
     },
     {
         "type": "normalize_dom_change",
@@ -4333,7 +4418,7 @@ const transcript_2 = [
             ]
         },
         "self_device_id": 0,
-        "timestamp": 1754715535959
+        "timestamp": 1754717101626
     },
     {
         "type": "replay",
@@ -4378,7 +4463,7 @@ const transcript_2 = [
                 "timestamp": 1754700000100
             }
         ],
-        "timestamp": 1754715535959
+        "timestamp": 1754717101627
     },
     {
         "type": "save_to_disk",
@@ -4457,7 +4542,7 @@ const transcript_2 = [
                 }
             ]
         },
-        "timestamp": 1754715535960
+        "timestamp": 1754717101627
     },
     {
         "type": "replay",
@@ -4484,7 +4569,7 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754715535960
+        "timestamp": 1754717101628
     },
     {
         "type": "replay",
@@ -4529,13 +4614,13 @@ const transcript_2 = [
                 "timestamp": 1754700000100
             }
         ],
-        "timestamp": 1754715535960
+        "timestamp": 1754717101628
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
         "value": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000Aa\u0002A",
-        "timestamp": 1754715535961
+        "timestamp": 1754717101629
     },
     {
         "type": "handle_decrypted_message",
@@ -4544,7 +4629,61 @@ const transcript_2 = [
             "value": 6
         },
         "device_id": 0,
-        "timestamp": 1754715540598
+        "timestamp": 1754717106265
+    },
+    {
+        "type": "cleanup_history",
+        "cutoff_id": 6,
+        "main_data": {
+            "current": [
+                {
+                    "id": 6,
+                    "c": "A"
+                }
+            ],
+            "history": [
+                {
+                    "type": "compressed history",
+                    "serialization": {
+                        "text": "",
+                        "time": 0,
+                        "baseline": 0
+                    },
+                    "final_state": {
+                        "state_1": {
+                            "current": []
+                        },
+                        "state_2": {
+                            "clock": 0,
+                            "causal_tree": []
+                        }
+                    },
+                    "id": 0
+                },
+                {
+                    "type": "add",
+                    "id": 2,
+                    "id_to_left": 0,
+                    "text": "A",
+                    "timestamp": 1754700000000
+                },
+                {
+                    "type": "remove",
+                    "id": 4,
+                    "deleted_id": 2,
+                    "text": "A",
+                    "timestamp": 1754700000000
+                },
+                {
+                    "type": "add",
+                    "text": "A",
+                    "id": 6,
+                    "id_to_left": 0,
+                    "timestamp": 1754700000100
+                }
+            ]
+        },
+        "timestamp": 1754717106265
     },
     {
         "type": "replay",
@@ -4589,7 +4728,97 @@ const transcript_2 = [
                 "timestamp": 1754700000100
             }
         ],
-        "timestamp": 1754715540599
+        "timestamp": 1754717106266
+    },
+    {
+        "type": "output",
+        "call_record": {
+            "type": "cleanup_history",
+            "cutoff_id": 6,
+            "main_data": {
+                "current": [
+                    {
+                        "id": 6,
+                        "c": "A"
+                    }
+                ],
+                "history": [
+                    {
+                        "type": "compressed history",
+                        "serialization": {
+                            "text": "",
+                            "time": 0,
+                            "baseline": 0
+                        },
+                        "final_state": {
+                            "state_1": {
+                                "current": []
+                            },
+                            "state_2": {
+                                "clock": 0,
+                                "causal_tree": []
+                            }
+                        },
+                        "id": 0
+                    },
+                    {
+                        "type": "add",
+                        "id": 2,
+                        "id_to_left": 0,
+                        "text": "A",
+                        "timestamp": 1754700000000
+                    },
+                    {
+                        "type": "remove",
+                        "id": 4,
+                        "deleted_id": 2,
+                        "text": "A",
+                        "timestamp": 1754700000000
+                    },
+                    {
+                        "type": "add",
+                        "text": "A",
+                        "id": 6,
+                        "id_to_left": 0,
+                        "timestamp": 1754700000100
+                    }
+                ]
+            }
+        },
+        "output": [
+            {
+                "type": "compressed history",
+                "serialization": {
+                    "text": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000Aa\u0002A",
+                    "time": 1754700000000,
+                    "baseline": 6
+                },
+                "final_state": {
+                    "state_1": {
+                        "current": [
+                            {
+                                "id": 6,
+                                "c": "A"
+                            }
+                        ]
+                    },
+                    "state_2": {
+                        "clock": 6,
+                        "causal_tree": [
+                            {
+                                "type": "add",
+                                "text": "A",
+                                "id": 6,
+                                "id_to_left": 0,
+                                "timestamp": 1754700000100
+                            }
+                        ]
+                    }
+                },
+                "id": 6
+            }
+        ],
+        "timestamp": 1754717106266
     },
     {
         "type": "on_change",
@@ -4601,7 +4830,7 @@ const transcript_2 = [
             "new_value": "AB"
         },
         "device_id": 0,
-        "timestamp": 1754715541991
+        "timestamp": 1754717107660
     },
     {
         "type": "normalize_dom_change",
@@ -4680,7 +4909,7 @@ const transcript_2 = [
             ]
         },
         "self_device_id": 0,
-        "timestamp": 1754715541991
+        "timestamp": 1754717107660
     },
     {
         "type": "replay",
@@ -4724,7 +4953,7 @@ const transcript_2 = [
                 "timestamp": 1754700000200
             }
         ],
-        "timestamp": 1754715541992
+        "timestamp": 1754717107660
     },
     {
         "type": "save_to_disk",
@@ -4799,7 +5028,7 @@ const transcript_2 = [
                 }
             ]
         },
-        "timestamp": 1754715541992
+        "timestamp": 1754717107661
     },
     {
         "type": "replay",
@@ -4833,7 +5062,7 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754715541993
+        "timestamp": 1754717107661
     },
     {
         "type": "replay",
@@ -4877,13 +5106,13 @@ const transcript_2 = [
                 "timestamp": 1754700000200
             }
         ],
-        "timestamp": 1754715541993
+        "timestamp": 1754717107662
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
         "value": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000Aa\u0002Aa\u0002\u0000B",
-        "timestamp": 1754715541993
+        "timestamp": 1754717107662
     },
     {
         "type": "on_change",
@@ -4895,7 +5124,7 @@ const transcript_2 = [
             "new_value": "ABC"
         },
         "device_id": 0,
-        "timestamp": 1754715542725
+        "timestamp": 1754717108392
     },
     {
         "type": "normalize_dom_change",
@@ -4978,7 +5207,7 @@ const transcript_2 = [
             ]
         },
         "self_device_id": 0,
-        "timestamp": 1754715542725
+        "timestamp": 1754717108392
     },
     {
         "type": "replay",
@@ -5029,7 +5258,7 @@ const transcript_2 = [
                 "timestamp": 1754700000300
             }
         ],
-        "timestamp": 1754715542725
+        "timestamp": 1754717108393
     },
     {
         "type": "save_to_disk",
@@ -5122,7 +5351,7 @@ const transcript_2 = [
                 }
             ]
         },
-        "timestamp": 1754715542725
+        "timestamp": 1754717108393
     },
     {
         "type": "replay",
@@ -5163,7 +5392,7 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754715542726
+        "timestamp": 1754717108393
     },
     {
         "type": "replay",
@@ -5214,13 +5443,13 @@ const transcript_2 = [
                 "timestamp": 1754700000300
             }
         ],
-        "timestamp": 1754715542726
+        "timestamp": 1754717108394
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
         "value": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000Aa\u0002Aa\u0002\u0000Ba\u0002\u0000C",
-        "timestamp": 1754715542727
+        "timestamp": 1754717108394
     },
     {
         "type": "on_change",
@@ -5232,7 +5461,7 @@ const transcript_2 = [
             "new_value": "BC"
         },
         "device_id": 0,
-        "timestamp": 1754715543959
+        "timestamp": 1754717109627
     },
     {
         "type": "normalize_dom_change",
@@ -5333,7 +5562,7 @@ const transcript_2 = [
             ]
         },
         "self_device_id": 0,
-        "timestamp": 1754715543959
+        "timestamp": 1754717109627
     },
     {
         "type": "replay",
@@ -5391,7 +5620,7 @@ const transcript_2 = [
                 "timestamp": 1754700000400
             }
         ],
-        "timestamp": 1754715543959
+        "timestamp": 1754717109627
     },
     {
         "type": "save_to_disk",
@@ -5494,7 +5723,7 @@ const transcript_2 = [
                 }
             ]
         },
-        "timestamp": 1754715543959
+        "timestamp": 1754717109627
     },
     {
         "type": "replay",
@@ -5542,7 +5771,7 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754715543960
+        "timestamp": 1754717109628
     },
     {
         "type": "replay",
@@ -5600,13 +5829,13 @@ const transcript_2 = [
                 "timestamp": 1754700000400
             }
         ],
-        "timestamp": 1754715543960
+        "timestamp": 1754717109628
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
         "value": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000Aa\u0002Aa\u0002\u0000Ba\u0002\u0000Cr\u0002A",
-        "timestamp": 1754715543961
+        "timestamp": 1754717109629
     },
     {
         "type": "handle_decrypted_message",
@@ -5630,7 +5859,7 @@ const transcript_2 = [
             ]
         },
         "device_id": 0,
-        "timestamp": 1754715547409
+        "timestamp": 1754717113077
     },
     {
         "type": "replay",
@@ -5702,7 +5931,7 @@ const transcript_2 = [
                 "timestamp": 1754700000600
             }
         ],
-        "timestamp": 1754715547410
+        "timestamp": 1754717113077
     },
     {
         "type": "save_to_disk",
@@ -5841,7 +6070,7 @@ const transcript_2 = [
                 }
             ]
         },
-        "timestamp": 1754715547410
+        "timestamp": 1754717113078
     },
     {
         "type": "replay",
@@ -5903,7 +6132,7 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754715547411
+        "timestamp": 1754717113078
     },
     {
         "type": "replay",
@@ -5975,13 +6204,13 @@ const transcript_2 = [
                 "timestamp": 1754700000600
             }
         ],
-        "timestamp": 1754715547411
+        "timestamp": 1754717113079
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
         "value": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000Aa\u0002Aa\u0002\u0000Ba\u0001Da\u0001Ca\u0001Er\u0001A",
-        "timestamp": 1754715547412
+        "timestamp": 1754717113079
     },
     {
         "type": "handle_decrypted_message",
@@ -5990,18 +6219,335 @@ const transcript_2 = [
             "value": 12
         },
         "device_id": 0,
-        "timestamp": 1754715547596
+        "timestamp": 1754717113264
+    },
+    {
+        "type": "cleanup_history",
+        "cutoff_id": 12,
+        "main_data": {
+            "current": [
+                {
+                    "id": 9,
+                    "c": "D"
+                },
+                {
+                    "id": 11,
+                    "c": "E"
+                },
+                {
+                    "id": 8,
+                    "c": "B"
+                },
+                {
+                    "id": 10,
+                    "c": "C"
+                }
+            ],
+            "history": [
+                {
+                    "type": "compressed history",
+                    "serialization": {
+                        "text": "",
+                        "time": 0,
+                        "baseline": 0
+                    },
+                    "final_state": {
+                        "state_1": {
+                            "current": []
+                        },
+                        "state_2": {
+                            "clock": 0,
+                            "causal_tree": []
+                        }
+                    }
+                }
+            ]
+        },
+        "timestamp": 1754717113264
     },
     {
         "type": "replay",
         "history": [],
-        "timestamp": 1754715547596
+        "timestamp": 1754717113264
+    },
+    {
+        "type": "output",
+        "call_record": {
+            "type": "cleanup_history",
+            "cutoff_id": 12,
+            "main_data": {
+                "current": [
+                    {
+                        "id": 9,
+                        "c": "D"
+                    },
+                    {
+                        "id": 11,
+                        "c": "E"
+                    },
+                    {
+                        "id": 8,
+                        "c": "B"
+                    },
+                    {
+                        "id": 10,
+                        "c": "C"
+                    }
+                ],
+                "history": [
+                    {
+                        "type": "compressed history",
+                        "serialization": {
+                            "text": "",
+                            "time": 0,
+                            "baseline": 0
+                        },
+                        "final_state": {
+                            "state_1": {
+                                "current": []
+                            },
+                            "state_2": {
+                                "clock": 0,
+                                "causal_tree": []
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "output": [
+            {
+                "type": "compressed history",
+                "serialization": {
+                    "text": "",
+                    "time": 0,
+                    "baseline": 0
+                },
+                "final_state": {
+                    "state_1": {
+                        "current": []
+                    },
+                    "state_2": {
+                        "clock": 0,
+                        "causal_tree": []
+                    }
+                },
+                "id": 12
+            }
+        ],
+        "timestamp": 1754717113265
     },
     {shifted_elements: [
-    {
-        "type": "replay",
-        "history": [],
-        "timestamp": 1754715547412
-    }
+        {
+            "type": "cleanup_history",
+            "main_data": {
+                "current": [
+                    {
+                        "id": 9,
+                        "c": "D"
+                    },
+                    {
+                        "id": 11,
+                        "c": "E"
+                    },
+                    {
+                        "id": 8,
+                        "c": "B"
+                    },
+                    {
+                        "id": 10,
+                        "c": "C"
+                    }
+                ],
+                "history": [
+                    {
+                        "type": "compressed history",
+                        "serialization": {
+                            "text": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000Aa\u0002A",
+                            "time": 1754700000000,
+                            "baseline": 6
+                        },
+                        "final_state": {
+                            "state_1": {
+                                "current": [
+                                    {
+                                        "id": 6,
+                                        "c": "A"
+                                    }
+                                ]
+                            },
+                            "state_2": {
+                                "clock": 6,
+                                "causal_tree": [
+                                    {
+                                        "type": "add",
+                                        "text": "A",
+                                        "id": 6,
+                                        "id_to_left": 0,
+                                        "timestamp": 1754700000100
+                                    }
+                                ]
+                            }
+                        },
+                        "id": 6
+                    },
+                    {
+                        "type": "add",
+                        "text": "B",
+                        "id": 8,
+                        "id_to_left": 6,
+                        "timestamp": 1754700000200
+                    },
+                    {
+                        "type": "add",
+                        "text": "C",
+                        "id": 10,
+                        "id_to_left": 8,
+                        "timestamp": 1754700000300
+                    },
+                    {
+                        "type": "remove",
+                        "text": "A",
+                        "id": 12,
+                        "deleted_id": 6,
+                        "timestamp": 1754700000400
+                    },
+                    {
+                        "type": "add",
+                        "text": "D",
+                        "id": 9,
+                        "id_to_left": 6,
+                        "timestamp": 1754700000500
+                    },
+                    {
+                        "type": "add",
+                        "text": "E",
+                        "id": 11,
+                        "id_to_left": 9,
+                        "timestamp": 1754700000600
+                    }
+                ]
+            },
+            "timestamp": 1754717113079
+        },
+        {
+            "type": "replay",
+            "history": [],
+            "timestamp": 1754717113079
+        },
+        {
+            "type": "output",
+            "call_record": {
+                "type": "cleanup_history",
+                "main_data": {
+                    "current": [
+                        {
+                            "id": 9,
+                            "c": "D"
+                        },
+                        {
+                            "id": 11,
+                            "c": "E"
+                        },
+                        {
+                            "id": 8,
+                            "c": "B"
+                        },
+                        {
+                            "id": 10,
+                            "c": "C"
+                        }
+                    ],
+                    "history": [
+                        {
+                            "type": "compressed history",
+                            "serialization": {
+                                "text": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000Aa\u0002A",
+                                "time": 1754700000000,
+                                "baseline": 6
+                            },
+                            "final_state": {
+                                "state_1": {
+                                    "current": [
+                                        {
+                                            "id": 6,
+                                            "c": "A"
+                                        }
+                                    ]
+                                },
+                                "state_2": {
+                                    "clock": 6,
+                                    "causal_tree": [
+                                        {
+                                            "type": "add",
+                                            "text": "A",
+                                            "id": 6,
+                                            "id_to_left": 0,
+                                            "timestamp": 1754700000100
+                                        }
+                                    ]
+                                }
+                            },
+                            "id": 6
+                        },
+                        {
+                            "type": "add",
+                            "text": "B",
+                            "id": 8,
+                            "id_to_left": 6,
+                            "timestamp": 1754700000200
+                        },
+                        {
+                            "type": "add",
+                            "text": "C",
+                            "id": 10,
+                            "id_to_left": 8,
+                            "timestamp": 1754700000300
+                        },
+                        {
+                            "type": "remove",
+                            "text": "A",
+                            "id": 12,
+                            "deleted_id": 6,
+                            "timestamp": 1754700000400
+                        },
+                        {
+                            "type": "add",
+                            "text": "D",
+                            "id": 9,
+                            "id_to_left": 6,
+                            "timestamp": 1754700000500
+                        },
+                        {
+                            "type": "add",
+                            "text": "E",
+                            "id": 11,
+                            "id_to_left": 9,
+                            "timestamp": 1754700000600
+                        }
+                    ]
+                }
+            },
+            "output": [
+                {
+                    "type": "compressed history",
+                    "serialization": {
+                        "text": "",
+                        "time": 0,
+                        "baseline": 0
+                    },
+                    "final_state": {
+                        "state_1": {
+                            "current": []
+                        },
+                        "state_2": {
+                            "clock": 0,
+                            "causal_tree": []
+                        }
+                    }
+                }
+            ],
+            "timestamp": 1754717113080
+        },
     ]},
 ];
