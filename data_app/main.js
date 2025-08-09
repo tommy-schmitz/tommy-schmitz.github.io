@@ -530,6 +530,8 @@ const sort_history = (history) => {
 
   dfs(0);
 
+  // TODO: Raise an error if there are any unreachable nodes.
+
   history.splice(0, history.length, ...result);
 
   return history;
