@@ -32,8 +32,7 @@ const time_now = (() => {
 window.event_log_for_testing = [];
 
 const record_for_testing = (stuff) => {
-  //const timestamp = Date.now();
-  const timestamp = performance.now();
+  const timestamp = Date.now();
   window.event_log_for_testing.push({...stuff, timestamp});
 };
 
@@ -49,7 +48,7 @@ const harness = (() => {
     for(const item of transcript_for_testing) {
       if(item.device_id === 0) {
         if(item.type === 'on_change'  ||  item.type === 'handle_decrypted_message') {
-          const now = performance.now();  // TODO: change this after doing the next recording
+          const now = transcript_for_testing[0].timestamp - 4000 + performance.now();
           if(now < item.timestamp)
             await sleep(item.timestamp - now);
         }
