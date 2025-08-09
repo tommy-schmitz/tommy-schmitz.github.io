@@ -1137,7 +1137,7 @@ const main = async() => {
       handle_network_operations_(parsed.value);
       const ack = parsed.highest_id_received;
       if(ack === undefined)
-        throw notify(1258);
+        return console.warn('interlocutor failed to provide highest_id_received; assuming 0');
       if(ack <= highest_id_sent_state.get()) {
         cleanup_history({cutoff_id: ack, main_data});
       } else {
