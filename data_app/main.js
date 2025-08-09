@@ -1060,6 +1060,8 @@ const make_feedback_div = () => {
   return {set_feedback_message, feedback_div};
 };
 
+const highest_id_sent_state = (() => {let state = 0; return {get: () => (state), set: (x) => {state = x;}};})();
+
 const initialize_network_manager = ({send_encrypted_data, self_device_id}) => {
   let highest_ack_sent = 0;
   const to_be_sent = [];
@@ -1072,6 +1074,7 @@ const initialize_network_manager = ({send_encrypted_data, self_device_id}) => {
       const ack = highest_id_received_state.get();
       if(to_be_sent.length > 0  ||  highest_ack_sent < ack) {
         await send_encrypted_data({type: 'changes', value: to_be_sent, highest_id_received: ack});
+        highest_id_sent_state.set(to_be_sent.slice(-1)[0].id);
         highest_ack_sent = ack;
       }
       await sleep(7000);
@@ -1128,8 +1131,11 @@ const main = async() => {
       const ack = parsed.highest_id_received;
       if(ack === undefined)
         throw notify(1258);
-      cleanup_history({cutoff_id: ack, main_data});  // TODO: There exist unsafe values of cutoff_id. Therefore ack should be checked somehow.
-                                                     // Otherwise an adversary can corrupt your data with a maliciously chosen ack.
+      if(ack <= highest_id_sent_state.get()) {
+        cleanup_history({cutoff_id: ack, main_data});
+      } else {
+        console.warn('adversary detected');
+      }
       to_be_sent.splice(0, to_be_sent.length, ...to_be_sent.filter((x) => (x.id > ack)));
     } else if(parsed.type === 'latest clock') {
       interlocutor_latest_history.resolve(parsed.value);
