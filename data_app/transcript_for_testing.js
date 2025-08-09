@@ -3611,7 +3611,7 @@ const transcript_2 = [
         "key": "main_text_box_history",
         "value": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000A",
         "device_id": 0,
-        "timestamp": 1754714849148
+        "timestamp": 1754715532906
     },
     {
         "type": "handle_decrypted_message",
@@ -3620,7 +3620,7 @@ const transcript_2 = [
             "value": 4
         },
         "device_id": 0,
-        "timestamp": 1754714849984
+        "timestamp": 1754715533404
     },
     {
         "type": "replay",
@@ -3640,7 +3640,7 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754714849985
+        "timestamp": 1754715533406
     },
     {
         "type": "handle_decrypted_message",
@@ -3649,7 +3649,7 @@ const transcript_2 = [
             "value": []
         },
         "device_id": 0,
-        "timestamp": 1754714850160
+        "timestamp": 1754715533580
     },
     {
         "type": "replay",
@@ -3669,7 +3669,7 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754714850161
+        "timestamp": 1754715533581
     },
     {
         "type": "save_to_disk",
@@ -3711,7 +3711,7 @@ const transcript_2 = [
                 }
             ]
         },
-        "timestamp": 1754714850162
+        "timestamp": 1754715533582
     },
     {
         "type": "replay",
@@ -3731,7 +3731,7 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754714850163
+        "timestamp": 1754715533583
     },
     {
         "type": "replay",
@@ -3751,13 +3751,13 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754714850163
+        "timestamp": 1754715533584
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
         "value": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000A",
-        "timestamp": 1754714850164
+        "timestamp": 1754715533585
     },
     {
         "type": "handle_decrypted_message",
@@ -3766,12 +3766,12 @@ const transcript_2 = [
             "value": 0
         },
         "device_id": 0,
-        "timestamp": 1754714850339
+        "timestamp": 1754715533759
     },
     {
         "type": "replay",
         "history": [],
-        "timestamp": 1754714850339
+        "timestamp": 1754715533759
     },
     {
         "type": "on_change",
@@ -3783,7 +3783,7 @@ const transcript_2 = [
             "new_value": "A"
         },
         "device_id": 0,
-        "timestamp": 1754714852539
+        "timestamp": 1754715535959
     },
     {
         "type": "normalize_dom_change",
@@ -3851,7 +3851,7 @@ const transcript_2 = [
             ]
         },
         "self_device_id": 0,
-        "timestamp": 1754714852539
+        "timestamp": 1754715535959
     },
     {
         "type": "replay",
@@ -3896,7 +3896,7 @@ const transcript_2 = [
                 "timestamp": 1754700000100
             }
         ],
-        "timestamp": 1754714852539
+        "timestamp": 1754715535959
     },
     {
         "type": "save_to_disk",
@@ -3975,7 +3975,7 @@ const transcript_2 = [
                 }
             ]
         },
-        "timestamp": 1754714852539
+        "timestamp": 1754715535960
     },
     {
         "type": "replay",
@@ -4002,7 +4002,7 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754714852540
+        "timestamp": 1754715535960
     },
     {
         "type": "replay",
@@ -4047,13 +4047,13 @@ const transcript_2 = [
                 "timestamp": 1754700000100
             }
         ],
-        "timestamp": 1754714852540
+        "timestamp": 1754715535960
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
         "value": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000Aa\u0002A",
-        "timestamp": 1754714852541
+        "timestamp": 1754715535961
     },
     {
         "type": "handle_decrypted_message",
@@ -4062,7 +4062,7 @@ const transcript_2 = [
             "value": 6
         },
         "device_id": 0,
-        "timestamp": 1754714857178
+        "timestamp": 1754715540598
     },
     {
         "type": "replay",
@@ -4107,7 +4107,7 @@ const transcript_2 = [
                 "timestamp": 1754700000100
             }
         ],
-        "timestamp": 1754714857178
+        "timestamp": 1754715540599
     },
     {
         "type": "on_change",
@@ -4119,7 +4119,7 @@ const transcript_2 = [
             "new_value": "AB"
         },
         "device_id": 0,
-        "timestamp": 1754714858571
+        "timestamp": 1754715541991
     },
     {
         "type": "normalize_dom_change",
@@ -4198,7 +4198,7 @@ const transcript_2 = [
             ]
         },
         "self_device_id": 0,
-        "timestamp": 1754714858571
+        "timestamp": 1754715541991
     },
     {
         "type": "replay",
@@ -4242,7 +4242,7 @@ const transcript_2 = [
                 "timestamp": 1754700000200
             }
         ],
-        "timestamp": 1754714858572
+        "timestamp": 1754715541992
     },
     {
         "type": "save_to_disk",
@@ -4317,7 +4317,7 @@ const transcript_2 = [
                 }
             ]
         },
-        "timestamp": 1754714858572
+        "timestamp": 1754715541992
     },
     {
         "type": "replay",
@@ -4351,7 +4351,7 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754714858573
+        "timestamp": 1754715541993
     },
     {
         "type": "replay",
@@ -4395,13 +4395,13 @@ const transcript_2 = [
                 "timestamp": 1754700000200
             }
         ],
-        "timestamp": 1754714858573
+        "timestamp": 1754715541993
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
         "value": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000Aa\u0002Aa\u0002\u0000B",
-        "timestamp": 1754714858573
+        "timestamp": 1754715541993
     },
     {
         "type": "on_change",
@@ -4413,7 +4413,7 @@ const transcript_2 = [
             "new_value": "ABC"
         },
         "device_id": 0,
-        "timestamp": 1754714859304
+        "timestamp": 1754715542725
     },
     {
         "type": "normalize_dom_change",
@@ -4496,7 +4496,7 @@ const transcript_2 = [
             ]
         },
         "self_device_id": 0,
-        "timestamp": 1754714859304
+        "timestamp": 1754715542725
     },
     {
         "type": "replay",
@@ -4547,7 +4547,7 @@ const transcript_2 = [
                 "timestamp": 1754700000300
             }
         ],
-        "timestamp": 1754714859305
+        "timestamp": 1754715542725
     },
     {
         "type": "save_to_disk",
@@ -4640,7 +4640,7 @@ const transcript_2 = [
                 }
             ]
         },
-        "timestamp": 1754714859305
+        "timestamp": 1754715542725
     },
     {
         "type": "replay",
@@ -4681,7 +4681,7 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754714859305
+        "timestamp": 1754715542726
     },
     {
         "type": "replay",
@@ -4732,13 +4732,13 @@ const transcript_2 = [
                 "timestamp": 1754700000300
             }
         ],
-        "timestamp": 1754714859306
+        "timestamp": 1754715542726
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
         "value": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000Aa\u0002Aa\u0002\u0000Ba\u0002\u0000C",
-        "timestamp": 1754714859306
+        "timestamp": 1754715542727
     },
     {
         "type": "on_change",
@@ -4750,7 +4750,7 @@ const transcript_2 = [
             "new_value": "BC"
         },
         "device_id": 0,
-        "timestamp": 1754714860539
+        "timestamp": 1754715543959
     },
     {
         "type": "normalize_dom_change",
@@ -4851,7 +4851,7 @@ const transcript_2 = [
             ]
         },
         "self_device_id": 0,
-        "timestamp": 1754714860539
+        "timestamp": 1754715543959
     },
     {
         "type": "replay",
@@ -4909,7 +4909,7 @@ const transcript_2 = [
                 "timestamp": 1754700000400
             }
         ],
-        "timestamp": 1754714860539
+        "timestamp": 1754715543959
     },
     {
         "type": "save_to_disk",
@@ -5012,7 +5012,7 @@ const transcript_2 = [
                 }
             ]
         },
-        "timestamp": 1754714860539
+        "timestamp": 1754715543959
     },
     {
         "type": "replay",
@@ -5060,7 +5060,7 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754714860540
+        "timestamp": 1754715543960
     },
     {
         "type": "replay",
@@ -5118,13 +5118,13 @@ const transcript_2 = [
                 "timestamp": 1754700000400
             }
         ],
-        "timestamp": 1754714860540
+        "timestamp": 1754715543960
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
         "value": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000Aa\u0002Aa\u0002\u0000Ba\u0002\u0000Cr\u0002A",
-        "timestamp": 1754714860541
+        "timestamp": 1754715543961
     },
     {
         "type": "handle_decrypted_message",
@@ -5148,7 +5148,7 @@ const transcript_2 = [
             ]
         },
         "device_id": 0,
-        "timestamp": 1754714863990
+        "timestamp": 1754715547409
     },
     {
         "type": "replay",
@@ -5220,7 +5220,7 @@ const transcript_2 = [
                 "timestamp": 1754700000600
             }
         ],
-        "timestamp": 1754714863990
+        "timestamp": 1754715547410
     },
     {
         "type": "save_to_disk",
@@ -5359,7 +5359,7 @@ const transcript_2 = [
                 }
             ]
         },
-        "timestamp": 1754714863991
+        "timestamp": 1754715547410
     },
     {
         "type": "replay",
@@ -5421,7 +5421,7 @@ const transcript_2 = [
                 "timestamp": 1754700000000
             }
         ],
-        "timestamp": 1754714863992
+        "timestamp": 1754715547411
     },
     {
         "type": "replay",
@@ -5493,13 +5493,13 @@ const transcript_2 = [
                 "timestamp": 1754700000600
             }
         ],
-        "timestamp": 1754714863992
+        "timestamp": 1754715547411
     },
     {
         "type": "localStorage.setItem",
         "key": "main_text_box_history",
         "value": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000Aa\u0002Aa\u0002\u0000Ba\u0001Da\u0001Ca\u0001Er\u0001A",
-        "timestamp": 1754714863992
+        "timestamp": 1754715547412
     },
     {
         "type": "handle_decrypted_message",
@@ -5508,78 +5508,18 @@ const transcript_2 = [
             "value": 12
         },
         "device_id": 0,
-        "timestamp": 1754714864176
+        "timestamp": 1754715547596
     },
     {
         "type": "replay",
-        "history": [
-            {
-                "type": "compressed history",
-                "serialization": {
-                    "text": "t\u0014êêÞa\u0002\u0000Ar\u0002\u0000Aa\u0002A",
-                    "time": 1754700000000,
-                    "baseline": 6
-                },
-                "final_state": {
-                    "state_1": {
-                        "current": [
-                            {
-                                "id": 6,
-                                "c": "A"
-                            }
-                        ]
-                    },
-                    "state_2": {
-                        "clock": 6,
-                        "causal_tree": [
-                            {
-                                "type": "add",
-                                "text": "A",
-                                "id": 6,
-                                "id_to_left": 0,
-                                "timestamp": 1754700000100
-                            }
-                        ]
-                    }
-                },
-                "id": 6
-            },
-            {
-                "type": "add",
-                "text": "B",
-                "id": 8,
-                "id_to_left": 6,
-                "timestamp": 1754700000200
-            },
-            {
-                "type": "add",
-                "text": "C",
-                "id": 10,
-                "id_to_left": 8,
-                "timestamp": 1754700000300
-            },
-            {
-                "type": "remove",
-                "text": "A",
-                "id": 12,
-                "deleted_id": 6,
-                "timestamp": 1754700000400
-            },
-            {
-                "type": "add",
-                "text": "D",
-                "id": 9,
-                "id_to_left": 6,
-                "timestamp": 1754700000500
-            },
-            {
-                "type": "add",
-                "text": "E",
-                "id": 11,
-                "id_to_left": 9,
-                "timestamp": 1754700000600
-            }
-        ],
-        "timestamp": 1754714864176
+        "history": [],
+        "timestamp": 1754715547596
+    },
+    {shifted_elements: [
+    {
+        "type": "replay",
+        "history": [],
+        "timestamp": 1754715547412
     }
+    ]},
 ];
