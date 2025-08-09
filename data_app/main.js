@@ -69,7 +69,7 @@ const harness = (() => {
       console.log('Simulated ', item.type, item);
     }
 
-    diff_transcripts(undefined, window.event_log_for_testing);
+    diff_transcripts(transcript, window.event_log_for_testing);
   };
 
   return {register, simulate, transcript};
