@@ -556,7 +556,6 @@ const handle_network_operations = (() => {
       data.history.push(sanitized_change);
       highest_id_received_state.set(Math.max(highest_id_received_state.get(), get_highest_op_id(sanitized_change)));
     }
-    send_encrypted_data({type: 'ack', value: highest_id_received_state.get()});  // asynchronous action
     const replayed = replay(data.history);
     save_replay({replayed, main_data: data, ephemeral_data});
     console.log('handle_network_operations history length (2)', data.history.length);
@@ -647,11 +646,6 @@ const cleanup_history = ({cutoff_id, main_data}) => {
   console.log(JSON.parse(JSON.stringify({cutoff_id, main_data, new_history})));
   record_for_testing({type: 'output', call_record, output: JSON.parse(JSON.stringify(new_history))});
   main_data.history.splice(0, main_data.history.length, ...new_history);
-};
-
-const handle_ack = ({to_be_sent, ack, main_data}) => {
-  to_be_sent.splice(0, to_be_sent.length, ...to_be_sent.filter((x) => (x.id > ack)));
-  cleanup_history({cutoff_id: ack, main_data});
 };
 
 const get_self_device_id = async({master_public_key, partner_key}) => {
@@ -1065,13 +1059,17 @@ const make_feedback_div = () => {
 };
 
 const initialize_network_manager = ({send_encrypted_data}) => {
+  let highest_ack_sent = 0;
   const to_be_sent = [];
   (async() => {
     while(true) {
       console.log('syncing');
-      if(to_be_sent.length > 0)
-        await send_encrypted_data({type: 'changes', value: to_be_sent, highest_id_received: highest_id_received_state.get()});
-      await sleep(1000);
+      const ack = highest_id_received_state.get();
+      if(to_be_sent.length > 0  ||  highest_ack_sent < ack) {
+        await send_encrypted_data({type: 'changes', value: to_be_sent, highest_id_received: ack});
+        highest_ack_sent = ack;
+      }
+      await sleep(7000);
     }
   })();
   return {network_buffer: to_be_sent};
@@ -1122,11 +1120,11 @@ const main = async() => {
 
     if(parsed.type === 'changes') {
       handle_network_operations_(parsed.value);
-      if(parsed.highest_id_received === undefined)
+      const ack = parsed.highest_id_received;
+      if(ack === undefined)
         throw notify(1258);
-      cleanup_history({cutoff_id: parsed.highest_id_received, main_data});
-    } else if(parsed.type === 'ack') {
-      handle_ack({to_be_sent, ack: parsed.value, main_data});
+      cleanup_history({cutoff_id: ack, main_data});
+      to_be_sent.splice(0, to_be_sent.length, ...to_be_sent.filter((x) => (x.id > ack)));
     } else if(parsed.type === 'latest clock') {
       interlocutor_latest_history.resolve(parsed.value);
     } else if(parsed.type === 'latest history') {
