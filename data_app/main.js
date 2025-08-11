@@ -248,10 +248,9 @@ const export_public_key = async(public_key) => {
 
 const page_load_promise = new Promise((resolve, reject) => (window.addEventListener('load', resolve)));
 
-const get_keys = async({ui, sock}) => {
+const get_keys = async({ui}) => {
   const {master_public_key, master_private_key} = await get_master_keys(ui);
   const public_jwk_string = await export_public_key(master_public_key);
-  await sock.emit('the id is', public_jwk_string);
 
   const maybe_partner_key = localStorage.getItem('partner_key');
   if(maybe_partner_key !== null) {
@@ -373,12 +372,17 @@ const decrypt = async(symmetric_key, cipher) => {
   return new TextDecoder().decode(decrypted);
 };
 
-const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: listener = null, interlocutor_latest_history}) => {
+const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: listener = null, interlocutor_latest_history, keys}) => {
+  const {master_private_key, master_public_key, partner_key} = keys;
+
+  const disconnected = make_resolvable_promise();
+
   ui.main_page_body.innerText = 'Connecting to server ...';
 
   const sock = socket_io(RELAY_SERVER_URL);
   sock.on('disconnect', () => {
     console.log('Disconnected.');
+    disconnected.resolve();
   });
   const interlocutor_available_promise = new Promise((resolve, reject) => (sock.on('interlocutor is available', resolve)));
   const real_connect_promise = new Promise((resolve, reject) => (sock.on('real_connect', resolve)));
@@ -386,7 +390,8 @@ const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: li
   await real_connect_promise;
   console.log('Connected.');
 
-  const {master_private_key, master_public_key, partner_key} = await get_keys({ui, sock});
+  const public_jwk_string = await export_public_key(master_public_key);
+  await sock.emit('the id is', public_jwk_string);
 
   ui.main_page_body.innerText = 'Connecting to interlocutor ...';
 
@@ -465,7 +470,7 @@ const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: li
 
   const self_device_id = await get_self_device_id({master_public_key, partner_key});
 
-  return {send_encrypted_data, set_decrypted_message_listener, self_device_id};
+  return {send_encrypted_data, set_decrypted_message_listener, self_device_id, disconnected};
 };
 
 const sanitize_change = ({untrusted_change, self_device_id}) => {
@@ -546,14 +551,7 @@ const sort_history = (history) => {
   return history;
 };
 
-const highest_id_received_state = (() => {
-  let highest_id_received = 0;
-
-  return {
-    get: () => (highest_id_received),
-    set: (x) => {highest_id_received = x;},
-  };
-})();
+const highest_id_received_state = (() => {let state = 0; return {get: () => (state), set: (x) => {state = x;}};})();
 
 const handle_network_operations = (() => {
   return ({send_encrypted_data, changes, textarea, main_data: data, self_device_id, set_textarea_value, ephemeral_data}) => {
@@ -1119,21 +1117,30 @@ const run_tests = () => {
   console.log('Ran tests.');
 };
 
-const main = async() => {
+const old_main = async({socket_io}) => {
+  console.log('\n\n\nStarting old_main()');
+
 //  run_tests();
 
-  const socket_io = await initialize_socket_io();
-
   const ui = await initialize_ui();
+
+  const keys = await get_keys({ui});
 
   const interlocutor_latest_history = make_resolvable_promise();
   const done_processing_latest_history = make_resolvable_promise();
 
-  const handle_network_operations_ = (changes) => {
+  const textarea_thingie = make_resolvable_promise();
+
+  const handle_network_operations_ = async(changes) => {
+    const textarea = await textarea_thingie.promise;
     handle_network_operations({changes, send_encrypted_data, textarea, main_data, self_device_id, set_textarea_value, ephemeral_data});
   };
 
-  const handle_decrypted_message_ = ({message: parsed}) => {
+  const self_device_id_thingie = make_resolvable_promise();
+
+  const handle_decrypted_message_ = async({message: parsed}) => {
+    const self_device_id = await self_device_id_thingie.promise;
+
     record_for_testing({type: 'handle_decrypted_message', message: parsed, device_id: self_device_id});
 
     if(parsed.type === 'changes') {
@@ -1162,12 +1169,15 @@ const main = async() => {
 
   harness.register({handle_decrypted_message: handle_decrypted_message_});
 
-  const {send_encrypted_data, self_device_id} = await get_encrypted_channel({ui, socket_io, interlocutor_latest_history,
-                                                                             handle_decrypted_message                   });
+  const {send_encrypted_data, self_device_id, disconnected} = await get_encrypted_channel({
+    ui, socket_io, interlocutor_latest_history, handle_decrypted_message, keys
+  });
 
   ui.main_page_body.innerText = 'Connection established. Loading initial data ...';
 
   console.log({self_device_id});
+
+  self_device_id_thingie.resolve(self_device_id);
 
   if(ENABLE_SIMULATION)
     harness.simulate();
@@ -1214,6 +1224,8 @@ const main = async() => {
     },
   });
 
+  textarea_thingie.resolve(textarea);
+
   harness.register({set_textarea_value});
 
   set_textarea_value(initial_text);
@@ -1224,6 +1236,17 @@ const main = async() => {
 
   ui.main_page_body.appendChild(textarea);
   ui.main_page_body.appendChild(feedback_div);
+
+  await disconnected.promise;
+};
+
+const main = async() => {
+  const socket_io = await initialize_socket_io();
+
+  while(true) {
+    await old_main({socket_io});
+    await sleep(1000);
+  }
 };
 
 main();
