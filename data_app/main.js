@@ -379,7 +379,7 @@ const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: li
 
   ui.main_page_body.innerText = 'Connecting to server ...';
 
-  const sock = socket_io(RELAY_SERVER_URL);
+  const sock = socket_io(RELAY_SERVER_URL, {reconnection: false});
   sock.on('disconnect', () => {
     console.log('Disconnected.');
     disconnected.resolve();
