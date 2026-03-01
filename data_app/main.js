@@ -39,8 +39,8 @@ const time_now = (() => {
 window.event_log_for_testing = [];
 
 const record_for_testing = (stuff) => {
-  const timestamp = Date.now();
-  window.event_log_for_testing.push({...stuff, timestamp});
+//  const timestamp = Date.now();
+//  window.event_log_for_testing.push({...stuff, timestamp});
 };
 
 const harness = (() => {
@@ -557,7 +557,7 @@ const sort_history = (history) => {
 const highest_id_received_state = (() => {let state = 0; return {get: () => (state), set: (x) => {state = x;}};})();
 
 const handle_network_operations = (() => {
-  return ({send_encrypted_data, changes, textarea, main_data: data, self_device_id, set_textarea_value, ephemeral_data}) => {
+  return ({send_encrypted_data, changes, textarea, main_data: data, self_device_id, set_textarea_value, ephemeral_data, enqueue_a_save_to_disk}) => {
     const prev_selection_start = textarea.selectionStart;
     const prev_selection_end   = textarea.selectionEnd;
     const id_left_of_selection_start = ((textarea.selectionStart === 0) ? 0 : data.current[textarea.selectionStart - 1].id);
@@ -571,7 +571,7 @@ const handle_network_operations = (() => {
     const replayed = replay(data.history);
     save_replay({replayed, main_data: data, ephemeral_data});
     console.log('handle_network_operations history length (2)', data.history.length);
-    save_to_disk({main_data: data, ephemeral_data});
+    enqueue_a_save_to_disk();
     set_textarea_value(data.current.map(({c}) => (c)).join(''));
     const new_id_left_of_selection_start = possibly_follow_tombstones({ephemeral_data, id: id_left_of_selection_start});
     textarea.selectionStart = find_index_with_hint({array: data.current, index_hint: prev_selection_start,
@@ -675,8 +675,8 @@ const get_self_device_id = async({master_public_key, partner_key}) => {
 };
 
 const replay = (history) => {
-  const call_record = JSON.parse(JSON.stringify({type: 'replay', history}));
-  record_for_testing(call_record);
+//  const call_record = JSON.parse(JSON.stringify({type: 'replay', history}));
+//  record_for_testing(call_record);
 
   const state_1 = {current: [], history: [...history]};
   const state_2 = {clock: 0, causal_tree: []};
@@ -704,18 +704,18 @@ const replay = (history) => {
   for(const op of state_2.causal_tree)
     if(op.type === 'add' && !deleted[op.id])
       state_1.current.push({id: op.id, c: op.text});
-  console.log('replay()', JSON.parse(JSON.stringify({history, state_1, state_2})));
+//  console.log('replay()', JSON.parse(JSON.stringify({history, state_1, state_2})));
   return {state_1, state_2};
 };
 
 // "t\u0014êJa\u0002\u0000Ha\u0002\u0000oa\u0002\u0000wa\u0002\u0000 a\u0002\u0000iTa\u0002\u0000sa\u0002\u0000 a\u0002\u0000ta\u0002\u0000ha\u0002\u0000ia\u0002\u0000sa\u0002\u0000 a\u0002\u0000ta\u0002\u0000ha\u0002\u0000ia\u0002\u0000na\u0002\u0000ga\u0002\u0000 a\u0002\u0000wa\u0002\u0000oa\u0002\u0000ra\u0002\u0000ka\u0002\u0000ia\u0002\u0000na\u0002\u0000ga\u0002\u0000?ta\u0003\u0000 a\u0002\u0000Pa\u0002\u0000ra\u0002\u0000ea\u0002\u0000ta\u0002\u0000ta\u0002\u0000ya\u0002\u0000 a\u0002\u0000wa\u0002\u0000ea\u0002\u0000la\u0002\u0000la\u0002\u0000,a\u0002\u0000 a\u0002\u0000Ia\u0002\u0000 Ta\u0001\u0000.a\u0001wa\u0001 a\u0001aa\u0001Oa\u0001ga\u0001ha\u0001ea\u0001 a\u0001ra\u0001ta\u0001.a\u0001ha\u0002\u0000aa\u0002\u0000ta\u0002\u0000'a\u0002\u0000sa\u0002\u0000 a\u0002\u0000ga\u0002\u0000oa\u0002\u0000oa\u0002\u0000da\u0002\u0000.Tr\u0002ÀtHTr\u0002Àtoa\u0002Àzaa\u0002\u0000wa\u0002\u0000ea\u0002\u0000fTrÀ~oa\u0002À{aa\u0002\u0000ea\u0002\u0000fa\u0002\u0000ea\u0002\u0000wa\u0002\u0000ktr\u0002ar\u0002er\u0002fr\u0002er\u0002wr\u0002kr\u0002ar\u0002wr\u0002er\u0002fr\u0002Á\u0015wr\u0002Á\u0015 r\u0002Á\u0015ir\u0002Á\u0015sr\u0002Á\u0015 r\u0002Á\u0015tr\u0002Á\u0015hr\u0002Á\u0015ir\u0002Á\u0015sr\u0002Á\u0015 r\u0002Á\u0015tr\u0002Á\u0015hr\u0002Á\u0015ir\u0002Á\u0015nr\u0002Á\u0015gr\u0002Á\u0015 r\u0002Á\u0015wr\u0002Á\u0015or\u0002Á\u0015rr\u0002Á\u0015kr\u0002Á\u0015ir\u0002Á\u0015nr\u0002Á\u0015gr\u0002Á\u0015?r\u0002Á\u0014 r\u0002Á\u0014Pr\u0002Á\u0014rr\u0002Á\u0014er\u0002Á\u0014tr\u0002Á\u0014tr\u0002Á\u0014yr\u0002Á\u0014 r\u0002Á\u0014wr\u0002Á\u0014er\u0002Á\u0014lr\u0002Á\u0014lr\u0002Á\u0014,r\u0002Á\u0014 r\u0002Á\u0014Ir\u0002Á\u0014 r\u0002Á\u0014wr\u0002Á\u0014ar\u0002Á\u0014gr\u0002Á\u0014er\u0002Á\u0014rr\u0002Á\u0014.r\u0002Á!.r\u0002Á! r\u0002Á!Or\u0002Á!hr\u0002Á! r\u0002Á!tr\u0002Á!hr\u0002Á!ar\u0002Á!tr\u0002Á!'r\u0002Á!sr\u0002Á! r\u0002Á!gr\u0002Á!or\u0002Á!or\u0002Á!dr\u0002Á!.a\u0002Â\u0019ra\u0002\u0000ea\u0002\u0000pa\u0002\u0000la\u0002\u0000aa\u0002\u0000ca\u0002\u0000ea\u0002\u0000d"
 
 const normalize_dom_change = ({main_data, change, ephemeral_data, self_device_id}) => {
-  const call_record = JSON.parse(JSON.stringify({type: 'normalize_dom_change', main_data, change, ephemeral_data, self_device_id}));
-  record_for_testing(call_record);
+//  const call_record = JSON.parse(JSON.stringify({type: 'normalize_dom_change', main_data, change, ephemeral_data, self_device_id}));
+//  record_for_testing(call_record);
 
   const timestamp = time_now();
-  const params = JSON.parse(JSON.stringify({main_data, change, ephemeral_data, self_device_id}));
+//  const params = JSON.parse(JSON.stringify({main_data, change, ephemeral_data, self_device_id}));
   const result = [];
   const {prev_value, removed, inserted, index, new_value} = change;
   let next_clock = (ephemeral_data.clock & -2) + 2 + self_device_id;
@@ -729,7 +729,7 @@ const normalize_dom_change = ({main_data, change, ephemeral_data, self_device_id
     const id_to_left = ((i === 0) ? ((index === 0) ? 0 : main_data.current[index - 1].id) : next_clock - 2);
     result.push({type: 'add', text: inserted[i], id: (next_clock += 2) - 2, id_to_left, timestamp});
   }
-  console.log('normalize_dom', {...params, result});
+//  console.log('normalize_dom', {...params, result});
   return result;
 };
 
@@ -954,8 +954,8 @@ const deserialize = (str) => {
 };
 
 const save_to_disk = ({main_data, ephemeral_data}) => {
-  const call_record = JSON.parse(JSON.stringify({type: 'save_to_disk', main_data, ephemeral_data}));
-  record_for_testing(call_record);
+//  const call_record = JSON.parse(JSON.stringify({type: 'save_to_disk', main_data, ephemeral_data}));
+//  record_for_testing(call_record);
 
   console.log('save_to_disk: history length', main_data.history.length);
 
@@ -993,7 +993,7 @@ const save_to_disk = ({main_data, ephemeral_data}) => {
 
   {
     const call_record = {type: 'localStorage.setItem', key: 'main_text_box_history', value: serialized};
-    record_for_testing(call_record);
+//    record_for_testing(call_record);
     localStorage.setItem(call_record.key, call_record.value);
   }
 };
@@ -1130,6 +1130,25 @@ const run_tests = () => {
   console.log('Ran tests.');
 };
 
+const spawn_a_thread_to_periodically_save_to_disk = ({main_data, ephemeral_data}) => {
+  let dirty = false;
+  const enqueue_a_save_to_disk = () => {dirty = true;};
+  (async() => {
+    while(true) {
+      try {
+        await sleep(2000);
+        if(dirty) {
+          dirty = false;
+          save_to_disk({main_data, ephemeral_data});
+        }
+      } catch(e) {
+        console.error(e);
+      }
+    }
+  })();
+  return {enqueue_a_save_to_disk};
+};
+
 const old_main = async({socket_io}) => {
   console.log('\n\n\nStarting old_main()');
 
@@ -1146,7 +1165,8 @@ const old_main = async({socket_io}) => {
 
   const handle_network_operations_ = async(changes) => {
     const textarea = await textarea_thingie.promise;
-    handle_network_operations({changes, send_encrypted_data, textarea, main_data, self_device_id, set_textarea_value, ephemeral_data});
+    handle_network_operations({changes, send_encrypted_data, textarea, main_data, self_device_id,
+                               set_textarea_value, ephemeral_data, enqueue_a_save_to_disk         });
   };
 
   const self_device_id_thingie = make_resolvable_promise();
@@ -1209,6 +1229,9 @@ const old_main = async({socket_io}) => {
   if(ENABLE_TIMESTAMP_REPLACEMENT)
     set_feedback_message('Note: fake timestamps are being recorded (for testing purposes).');
 
+  // Spawn a thread to periodically save to disk:
+  const {enqueue_a_save_to_disk} = spawn_a_thread_to_periodically_save_to_disk({main_data, ephemeral_data});
+
   const on_change = (change) => {
     const call_record = {type: 'on_change', change, device_id: self_device_id};
     record_for_testing(call_record);
@@ -1219,7 +1242,7 @@ const old_main = async({socket_io}) => {
     }
     const replayed = replay(main_data.history);
     save_replay({replayed, main_data, ephemeral_data});
-    save_to_disk({main_data, ephemeral_data});
+    enqueue_a_save_to_disk();
   };
 
   harness.register({on_change});
