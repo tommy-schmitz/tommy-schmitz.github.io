@@ -772,7 +772,7 @@ const round_down_to_nearest = (x, y) => {
   return x - (x % y);
 };
 
-const serialize_as_varnum = (m) => {
+const serialize_as_varnum_ = (m) => {
   if(m !== (m-(m%1))) {
     console.log(1245, m);
     throw notify(1245);
@@ -794,9 +794,19 @@ const serialize_as_varnum = (m) => {
   if(n < 134217728)
     return [sign_bit + 64 + ((n&(127<<21))>>21), 128 + ((n&(127<<14))>>14), 128 + ((n>>7)&127), n&127];
 
-  console.error('serialize_as_varnum(', m);
+  console.error('serialize_as_varnum_(', m, ')');
 
   throw notify(1246);
+};
+
+const serialize_as_varnum = (m) => {
+  const result = serialize_as_varnum_(m);
+  const check = deserialize_varnum(result, 0);
+  if(check[0] !== m) {
+    console.log(1262, {m, result, check});
+    throw notify(1262);
+  }
+  return result;
 };
 
 const deserialize_varnum = (array, index) => {
@@ -820,12 +830,12 @@ const deserialize_varnum = (array, index) => {
     throw notify(1256);
 
   if(array[index + 2] < 128)
-    return [sign * (((array[index]&63)<<14) | ((array[index+1]&128)<<7) | array[index+2]), 3];
+    return [sign * (((array[index]&63)<<14) | ((array[index+1]&127)<<7) | array[index+2]), 3];
 
   if(index+3 >= array.length)
     throw notify(1257);
 
-  return [sign * (((array[index]&63)<<21) | ((array[index+1]&128)<<14) | ((array[index+2]&128)<<7) | array[index+3]), 4];
+  return [sign * (((array[index]&63)<<21) | ((array[index+1]&127)<<14) | ((array[index+2]&127)<<7) | array[index+3]), 4];
 };
 
 const serialize = (history) => {
