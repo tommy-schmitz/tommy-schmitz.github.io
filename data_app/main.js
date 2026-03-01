@@ -544,7 +544,10 @@ const sort_history = (history) => {
 
   dfs(0);
 
-  // TODO: Raise an error if there are any unreachable nodes.
+  // Raise an error if there are any unreachable nodes.
+  for(const id in lookup_table)
+    if(!finished[id])
+      throw notify(1261);
 
   history.splice(0, history.length, ...result);
 
