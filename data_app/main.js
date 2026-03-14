@@ -1132,13 +1132,14 @@ const run_tests = () => {
 
 const spawn_a_thread_to_periodically_save_to_disk = ({main_data, ephemeral_data}) => {
   let dirty = false;
-  const enqueue_a_save_to_disk = () => {dirty = true;};
+  const enqueue_a_save_to_disk = () => {dirty = true;}; // TODO: set onbeforeunload
   (async() => {
     while(true) {
       try {
         await sleep(2000);
         if(dirty) {
           dirty = false;
+          // TODO: unset onbeforeunload
           save_to_disk({main_data, ephemeral_data});
         }
       } catch(e) {
