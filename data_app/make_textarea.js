@@ -1,4 +1,4 @@
-const make_textarea = ({on_change, on_undo, on_redo}) => {
+const old_make_textarea = ({on_change, on_undo, on_redo}) => {
   const textarea = document.createElement('textarea');
   let prev_value = '';
   let start;
@@ -46,4 +46,62 @@ const make_textarea = ({on_change, on_undo, on_redo}) => {
     textarea.value = new_value;
   };
   return {textarea, set_value};
+};
+
+const make_textarea = ({on_change, on_undo, on_redo}) => {
+  let prev_value = '';
+  let start;
+  let end;
+  let cursor = 0;
+
+  const editor = document.createElement('div');
+  editor.style.cssText = `
+    font-family: monospace;
+    border: 1px solid #ccc;
+    padding: 10px;
+    width: 90%;
+    min-height: 100px;
+    white-space: pre;
+    outline: none;
+    line-height: 1.5;
+    margin: 20px;
+    font-size: 14px;
+  `;
+  editor.setAttribute('tabindex', 0);
+
+  const render = () => {
+    const maybe_cursor = (() => {
+      if(document.activeElement === editor)
+        return '█';
+      else
+        return '';
+    })();
+    editor.textContent = prev_value.slice(0, cursor) + maybe_cursor + prev_value.slice(cursor);
+  };
+
+  editor.addEventListener('keydown', (e) => {
+    e.preventDefault();
+    if (e.key === 'Backspace' && cursor > 0) {
+      prev_value = prev_value.slice(0, cursor - 1);
+      cursor--;
+    } else if (e.key === 'ArrowLeft' && cursor > 0) {
+      cursor--;
+    } else if (e.key === 'ArrowRight' && cursor < prev_value.length) {
+      cursor++;
+    } else if (e.key.length === 1) {
+      prev_value = prev_value.slice(0, cursor) + e.key + prev_value.slice(cursor);
+      cursor++;
+    }
+    render();
+  });
+
+  editor.addEventListener('focus', render);
+  editor.addEventListener('blur', render);
+
+  const set_value = (new_value) => {
+    prev_value = new_value;
+    render();
+  };
+
+  return {textarea: editor, set_value};
 };
