@@ -1,4 +1,4 @@
-const old_make_textarea = ({on_change, on_undo, on_redo}) => {
+const make_textarea = ({on_change, on_undo, on_redo}) => {
   const textarea = document.createElement('textarea');
   let prev_value = '';
   let start;
@@ -48,7 +48,7 @@ const old_make_textarea = ({on_change, on_undo, on_redo}) => {
   return {textarea, set_value};
 };
 
-const make_textarea = ({on_change, on_undo, on_redo}) => {
+const new_make_textarea = ({on_change, on_undo, on_redo}) => {
   let prev_value = '';
   let start;
   let end;
