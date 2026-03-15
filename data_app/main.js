@@ -910,14 +910,14 @@ const serialize = (history) => {
       array.push('a'.charCodeAt(0));
       array.push(...serialize_as_varnum(id - baseline));
       array.push(...serialize_as_varnum(id_to_left - baseline));
-      array.push(text.charCodeAt(0));
+      array.push(...new TextEncoder().encode(text));
       baseline = id;
     } else if(item.type === 'remove') {
       const {deleted_id, id, text} = item;
       array.push('r'.charCodeAt(0));
       array.push(...serialize_as_varnum(id - baseline));
       array.push(...serialize_as_varnum(deleted_id - baseline));
-      array.push(text.charCodeAt(0));
+      array.push(...new TextEncoder().encode(text));
       baseline = id;
     } else if(item.type === 'compressed history') {
       array.push(...decode_binary(item.serialization.text));
@@ -956,19 +956,23 @@ const deserialize = (str) => {
         const [v2, len_2] = deserialize_varnum(array, index + 1 + len_1);
         const id = baseline + v1;
         const id_to_left = baseline + v2;
-        const text = String.fromCharCode(array[index + 1 + len_1 + len_2]);
+        const temp = index + 1 + len_1 + len_2;
+        const text = new TextDecoder('utf-8', {stream: true}).decode(array.slice(temp, temp + 4))[0];
+        const len_3 = new TextEncoder().encode(text).length;
         history.push({type: 'add', id, id_to_left, text, timestamp: time});
         baseline = id;
-        index += 1 + len_1 + len_2 + 1;
+        index += 1 + len_1 + len_2 + len_3;
       } else if(array[index] === 'r'.charCodeAt(0)) {
         const [v1, len_1] = deserialize_varnum(array, index + 1);
         const [v2, len_2] = deserialize_varnum(array, index + 1 + len_1);
         const id = baseline + v1;
         const deleted_id = baseline + v2;
-        const text = String.fromCharCode(array[index + 1 + len_1 + len_2]);
+        const temp = index + 1 + len_1 + len_2;
+        const text = new TextDecoder('utf-8', {stream: true}).decode(array.slice(temp, temp + 4))[0];
+        const len_3 = new TextEncoder().encode(text).length;
         history.push({type: 'remove', id, deleted_id, text, timestamp: time});
         baseline = id;
-        index += 1 + len_1 + len_2 + 1;
+        index += 1 + len_1 + len_2 + len_3;
       } else {
         console.log(1249, {array, history, index, byte: array[index]});
         throw notify(1249);
@@ -1012,7 +1016,13 @@ const save_to_disk = ({main_data, ephemeral_data}) => {
   const replayed_2 = replay(main_data.history);
   replayed_1.state_1.history = replayed_2.state_1.history = replayed_1.state_2.causal_tree = replayed_2.state_2.causal_tree = null;
   if(make_stable_string(replayed_1) !== make_stable_string(replayed_2)) {
-    console.log(1253, {replayed_1, replayed_2});
+    const s1 = make_stable_string(replayed_1);
+    const s2 = make_stable_string(replayed_2);
+    let index = 0;
+    for(; index<Math.min(s1.length, s2.length); ++index)
+      if(s1[index] !== s2[index])
+        break;
+    console.log(1253, {replayed_1, replayed_2, index, snippet_1: s1.slice(index-50, index+50), snippet_2: s2.slice(index-50, index+50)});
     throw notify(1253);
   }
 
@@ -1020,7 +1030,14 @@ const save_to_disk = ({main_data, ephemeral_data}) => {
   const deserialized = deserialize(serialized);
   const {text: again} = serialize(deserialized);
   if(again !== serialized) {
-    console.log(1252, {serialized, again_____: again, deserialized});
+    let index = 0;
+    for(; index<Math.min(serialized.length, again.length); ++index)
+      if(serialized[index] !== again[index])
+        break;
+    console.log(1252, {
+      serialized, again_____: again, deserialized,
+      snippet_1: serialized.slice(index-50, index+50), snippet_2: again.slice(index-50, index+50),
+    });
     throw notify(1252);
   }
 
