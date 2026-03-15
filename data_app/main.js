@@ -499,7 +499,11 @@ const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: li
 
   const self_device_id = await get_self_device_id({master_public_key, partner_key});
 
-  return {send_encrypted_data, set_decrypted_message_listener, self_device_id, disconnected};
+  const disconnect = () => {
+    sock.disconnect();
+  };
+
+  return {send_encrypted_data, set_decrypted_message_listener, self_device_id, disconnected, disconnect};
 };
 
 const sanitize_change = ({untrusted_change, self_device_id}) => {
@@ -1159,11 +1163,14 @@ const run_tests = () => {
   console.log('Ran tests.');
 };
 
-const spawn_a_thread_to_periodically_save_to_disk = ({main_data, ephemeral_data, defer}) => {
+const spawn_a_thread_to_periodically_save_to_disk = ({main_data, ephemeral_data, defer, restart_codebase}) => {
   let dirty = false;
   const enqueue_a_save_to_disk = () => {
     dirty = true;
-    window.onbeforeunload = () => ('warn user');
+    window.onbeforeunload = () => {
+      restart_codebase();
+      return 'warn user';
+    };
   };
 
   let timeout_id = null;
@@ -1246,7 +1253,7 @@ const old_main = async({socket_io, defer}) => {
 
   harness.register({handle_decrypted_message: handle_decrypted_message_});
 
-  const {send_encrypted_data, self_device_id, disconnected} = await get_encrypted_channel({
+  const {send_encrypted_data, self_device_id, disconnected, disconnect} = await get_encrypted_channel({
     ui, socket_io, interlocutor_latest_history, handle_decrypted_message, keys
   });
 
@@ -1274,7 +1281,9 @@ const old_main = async({socket_io, defer}) => {
     set_feedback_message('Note: fake timestamps are being recorded (for testing purposes).');
 
   // Spawn a thread to periodically save to disk:
-  const {enqueue_a_save_to_disk} = spawn_a_thread_to_periodically_save_to_disk({main_data, ephemeral_data, defer});
+  const {enqueue_a_save_to_disk} = spawn_a_thread_to_periodically_save_to_disk({
+    main_data, ephemeral_data, defer, restart_codebase: disconnect,
+  });
 
   const on_change = (change) => {
     const call_record = {type: 'on_change', change, device_id: self_device_id};
