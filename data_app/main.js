@@ -590,11 +590,11 @@ const sort_history = (history) => {
 const highest_id_received_state = (() => {let state = 0; return {get: () => (state), set: (x) => {state = x;}};})();
 
 const handle_network_operations = (() => {
-  return ({send_encrypted_data, changes, textarea, main_data: data, self_device_id, set_textarea_value, ephemeral_data, enqueue_a_save_to_disk}) => {
-    const prev_selection_start = textarea.selectionStart;
-    const prev_selection_end   = textarea.selectionEnd;
-    const id_left_of_selection_start = ((textarea.selectionStart === 0) ? 0 : data.current[textarea.selectionStart - 1].id);
-    const id_left_of_selection_end   = ((textarea.selectionEnd   === 0) ? 0 : data.current[textarea.selectionEnd   - 1].id);
+  return ({send_encrypted_data, changes, editor, main_data: data, self_device_id, ephemeral_data, enqueue_a_save_to_disk}) => {
+    const prev_selection_start = editor.get_selection_start();
+    const prev_selection_end   = editor.get_selection_end();
+    const id_left_of_selection_start = ((prev_selection_start === 0) ? 0 : data.current[prev_selection_start - 1].id);
+    const id_left_of_selection_end   = ((prev_selection_end   === 0) ? 0 : data.current[prev_selection_end   - 1].id);
     console.log('handle_network_operations history length (1)', data.history.length);
     for(const untrusted_change of filter_changes({changes, highest_id_received: highest_id_received_state.get()})) {
       const sanitized_change = sanitize_change({untrusted_change, self_device_id});
@@ -605,14 +605,15 @@ const handle_network_operations = (() => {
     save_replay({replayed, main_data: data, ephemeral_data});
     console.log('handle_network_operations history length (2)', data.history.length);
     enqueue_a_save_to_disk();
-    set_textarea_value(data.current.map(({c}) => (c)).join(''));
+    editor.set_value(data.current.map(({c}) => (c)).join(''));
     const new_id_left_of_selection_start = possibly_follow_tombstones({ephemeral_data, id: id_left_of_selection_start});
-    textarea.selectionStart = find_index_with_hint({array: data.current, index_hint: prev_selection_start,
-                                                    filter: ({id}) => (id === new_id_left_of_selection_start)}) + 1;
-    const new_id_left_of_selection_end   = possibly_follow_tombstones({ephemeral_data, id: id_left_of_selection_end  });
-    textarea.selectionEnd   = find_index_with_hint({array: data.current, index_hint: prev_selection_end  ,
-                                                    filter: ({id}) => (id === new_id_left_of_selection_end  )}) + 1;
-
+    editor.set_selection_start(
+      find_index_with_hint({array: data.current, index_hint: prev_selection_start, filter: ({id})=>(id===new_id_left_of_selection_start)}) + 1
+    );
+    const new_id_left_of_selection_end = possibly_follow_tombstones({ephemeral_data, id: id_left_of_selection_end});
+    editor.set_selection_end(
+      find_index_with_hint({array: data.current, index_hint: prev_selection_end, filter: ({id})=>(id===new_id_left_of_selection_end)}) + 1
+    );
   };
 })();
 
@@ -1234,9 +1235,8 @@ const old_main = async({socket_io, defer}) => {
   const textarea_thingie = make_resolvable_promise();
 
   const handle_network_operations_ = async(changes) => {
-    const textarea = await textarea_thingie.promise;
-    handle_network_operations({changes, send_encrypted_data, textarea, main_data, self_device_id,
-                               set_textarea_value, ephemeral_data, enqueue_a_save_to_disk         });
+    const editor = await textarea_thingie.promise;
+    handle_network_operations({changes, send_encrypted_data, editor, main_data, self_device_id, ephemeral_data, enqueue_a_save_to_disk});
   };
 
   const self_device_id_thingie = make_resolvable_promise();
@@ -1319,7 +1319,7 @@ const old_main = async({socket_io, defer}) => {
 
   harness.register({on_change});
 
-  const {textarea, set_value: set_textarea_value} = make_textarea({
+  const editor = make_textarea({
     on_change,
 
     // TODO: implement proper undo and redo in this portion of the code
@@ -1332,17 +1332,17 @@ const old_main = async({socket_io, defer}) => {
     },
   });
 
-  textarea_thingie.resolve(textarea);
+  textarea_thingie.resolve(editor);
 
-  harness.register({set_textarea_value});
+  harness.register({set_textarea_value: editor.set_value});
 
-  set_textarea_value(initial_text);
+  editor.set_value(initial_text);
 
   await done_processing_latest_history.promise;
 
   ui.main_page_body.innerText = '';
 
-  ui.main_page_body.appendChild(textarea);
+  ui.main_page_body.appendChild(editor.div);
   ui.main_page_body.appendChild(feedback_div);
 
   await disconnected.promise;

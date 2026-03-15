@@ -1,4 +1,4 @@
-const make_textarea = ({on_change, on_undo, on_redo}) => {
+const old_make_textarea = ({on_change, on_undo, on_redo}) => {
   const textarea = document.createElement('textarea');
   let prev_value = '';
   let start;
@@ -48,7 +48,7 @@ const make_textarea = ({on_change, on_undo, on_redo}) => {
   return {textarea, set_value};
 };
 
-const new_make_textarea = ({on_change, on_undo, on_redo}) => {
+const make_textarea = ({on_change, on_undo, on_redo}) => {
   let prev_value = '';
   let start;
   let end;
@@ -226,5 +226,12 @@ const new_make_textarea = ({on_change, on_undo, on_redo}) => {
     render();
   };
 
-  return {textarea: editor, set_value};
+  return {
+    div: editor,
+    set_value,
+    get_selection_start: () => (selection_start),
+    set_selection_start: (x) => {selection_start = x;},
+    get_selection_end: () => (selection_end),
+    set_selection_end: (x) => {selection_end = x;},
+  };
 };
