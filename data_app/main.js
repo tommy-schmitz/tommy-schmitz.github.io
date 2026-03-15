@@ -1209,8 +1209,10 @@ const spawn_a_thread_to_periodically_save_to_disk = ({main_data, ephemeral_data,
     if(timeout_id !== null) {
       clearTimeout(timeout_id);
       timeout_id = null;
-      if(dirty)
+      if(dirty) {
         save_to_disk({main_data, ephemeral_data});
+        window.onbeforeunload = null;
+      }
     }
   };
   defer(kill_saver_thread);
