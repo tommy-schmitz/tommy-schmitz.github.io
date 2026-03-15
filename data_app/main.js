@@ -94,6 +94,35 @@ const diff_transcripts = (transcript_1 = transcript_for_testing, transcript_2_ =
 };
 diff_transcripts();
 
+const make_deferrer = () => {
+  let already_finalized = false;
+  const a = [];
+  const defer = (f) => {
+    if(already_finalized)
+      throw new Error('defer() after finalize()');
+    a.push(f);
+  };
+  const finalize = () => {
+    if(already_finalized)
+      throw new Error('multiple calls to finalize()');
+
+    let errored = false;
+    for(let i=a.length-1; i>=0; --i) {
+      try {
+        a[i]();
+      } catch(e) {
+        errored = true;
+        console.error(e);
+      }
+    }
+    a.length = 0;
+    already_finalized = true;
+    if(errored)
+      throw new Error('errors during finalize() (see console errors)');
+  };
+  return {defer, finalize};
+};
+
 const initialize_socket_io = async() => {
   console.log('initializing "socket.io"');
 
@@ -1130,27 +1159,41 @@ const run_tests = () => {
   console.log('Ran tests.');
 };
 
-const spawn_a_thread_to_periodically_save_to_disk = ({main_data, ephemeral_data}) => {
+const spawn_a_thread_to_periodically_save_to_disk = ({main_data, ephemeral_data, defer}) => {
   let dirty = false;
-  const enqueue_a_save_to_disk = () => {dirty = true;}; // TODO: set onbeforeunload
-  (async() => {
-    while(true) {
-      try {
-        await sleep(2000);
-        if(dirty) {
-          dirty = false;
-          // TODO: unset onbeforeunload
-          save_to_disk({main_data, ephemeral_data});
-        }
-      } catch(e) {
-        console.error(e);
+  const enqueue_a_save_to_disk = () => {
+    dirty = true;
+    window.onbeforeunload = () => ('warn user');
+  };
+
+  let timeout_id = null;
+  const f = () => {
+    try {
+      if(dirty) {
+        dirty = false;
+        save_to_disk({main_data, ephemeral_data});
+        window.onbeforeunload = null;
       }
+    } catch(e) {
+      console.error(e);
     }
-  })();
+    timeout_id = setTimeout(f, 2000);
+  };
+  f();
+
+  const kill_saver_thread = () => {
+    if(timeout_id !== null) {
+      clearTimeout(timeout_id);
+      timeout_id = null;
+      if(dirty)
+        save_to_disk({main_data, ephemeral_data});
+    }
+  };
+  defer(kill_saver_thread);
   return {enqueue_a_save_to_disk};
 };
 
-const old_main = async({socket_io}) => {
+const old_main = async({socket_io, defer}) => {
   console.log('\n\n\nStarting old_main()');
 
 //  run_tests();
@@ -1231,7 +1274,7 @@ const old_main = async({socket_io}) => {
     set_feedback_message('Note: fake timestamps are being recorded (for testing purposes).');
 
   // Spawn a thread to periodically save to disk:
-  const {enqueue_a_save_to_disk} = spawn_a_thread_to_periodically_save_to_disk({main_data, ephemeral_data});
+  const {enqueue_a_save_to_disk} = spawn_a_thread_to_periodically_save_to_disk({main_data, ephemeral_data, defer});
 
   const on_change = (change) => {
     const call_record = {type: 'on_change', change, device_id: self_device_id};
@@ -1281,8 +1324,17 @@ const main = async() => {
   const socket_io = await initialize_socket_io();
 
   while(true) {
-    await old_main({socket_io});
-    await sleep(1000);
+    const deferrer = make_deferrer();
+    try {
+      await old_main({socket_io, defer: deferrer.defer});
+      await sleep(1000);
+    } catch(e) {
+      console.error(e);
+    } finally {
+      deferrer.finalize();
+    }
+
+    console.log('Restarting the whole codebase.');
   }
 };
 
