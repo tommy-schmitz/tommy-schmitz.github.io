@@ -1321,6 +1321,7 @@ const old_main = async({socket_io, defer}) => {
 
   const editor = make_textarea({
     on_change,
+    notify,
 
     // TODO: implement proper undo and redo in this portion of the code
     // For now, we'll just disable:
