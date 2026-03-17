@@ -1,4 +1,4 @@
-const old_make_textarea = ({on_change, on_undo, on_redo}) => {
+const make_textarea = ({on_change, on_undo, on_redo}) => {
   const textarea = document.createElement('textarea');
   let prev_value = '';
   let start;
@@ -45,7 +45,14 @@ const old_make_textarea = ({on_change, on_undo, on_redo}) => {
     prev_value = new_value;
     textarea.value = new_value;
   };
-  return {textarea, set_value};
+  return {
+    div: textarea,
+    set_value,
+    get_selection_start: () => (textarea.selectionStart),
+    set_selection_start: (x) => {textarea.selectionStart = x;},
+    get_selection_end: () => (textarea.selectionEnd),
+    set_selection_end: (x) => {textarea.selectionEnd = x;},
+  };
 };
 
 const process_keydown = async({text_value, event: e, selection_start, selection_end}) => {
@@ -363,7 +370,7 @@ const render_helper = ({div, text_value, notify}) => {
 //  );
 };
 
-const make_textarea = ({on_change, on_undo, on_redo, notify}) => {
+const new_make_textarea = ({on_change, on_undo, on_redo, notify}) => {
   let text_value = '';
   let selection_start = 0;
   let selection_end = 0;
