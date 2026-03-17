@@ -1087,9 +1087,10 @@ const compute_initial_text = async({send_encrypted_data, self_device_id, interlo
   })();
   record_for_testing({type: 'localStorage.getItem', key: 'main_text_box_history', value: stored, device_id: self_device_id});
   const stored_history = ((stored === null) ? [] : deserialize(stored));
-  send_encrypted_data({type: 'latest clock', value: get_latest_id({history: stored_history, self_device_id})});  // asynchronous action
+  const my_latest_id = get_latest_id({history: stored_history, self_device_id});
+  highest_id_received_state.set(my_latest_id);
+  send_encrypted_data({type: 'latest clock', value: my_latest_id});  // asynchronous action
   const other_latest_history_id = await interlocutor_latest_history.promise;
-  highest_id_received_state.set(other_latest_history_id);
   console.log({other_latest_history_id});
   const replayed = replay(stored_history);
   send_encrypted_data({type: 'latest history', value: filter_network_operations({network_operations: stored_history, seen_id: other_latest_history_id, self_device_id})});  // async
