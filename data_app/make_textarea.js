@@ -219,6 +219,150 @@ const process_keydown_2 = ({prev_value, new_value, start_0, end_0, event: e, on_
   }
 };
 
+const create_caret = () => {
+  const ret = document.createElement('div');
+  ret.style.cssText = `
+    display: inline;
+    white-space: nowrap;
+  `;
+
+  const child = document.createElement('div');
+  child.style.cssText = `
+    display: inline-block;
+    width: 0px;
+    height: 1lh;
+    vertical-align: bottom;
+  `;
+  ret.appendChild(child);
+
+  const grandchild = document.createElement('div');
+  grandchild.style.cssText = `
+    display: inline-block;
+    background-color: black;
+    width: 1px;
+    height: 100%;
+  `;
+  child.appendChild(grandchild);
+
+  return ret;
+};
+
+const fix_whitespace = (str, cell, {selected = false} = {}) => {
+  // Replace some spaces with non-breaking spaces:
+  //const processedStr = str.replace(/([\n ]) | (\n|$)/g, (match) => ((match[1]??'') + '\u00A0' + (match[2]??'')));
+  //const processedStr = str.replace(/ /g, (match) => ('\u00A0'));
+  const processedStr = (str
+    .replace(/[\n ] +/g, (match) => (match[0][0] + '\u00A0'.repeat(match[0].length-1)))
+    .replace(/ (\n|$)/g, (match) => ('\u00A0' + (match[1]??'')))
+  );
+
+  console.log({processedStr});
+
+  return processedStr.split('\n').flatMap((x, i, pieces) => {
+    const rendered = document.createElement('span');
+    if(selected) {
+      rendered.style.cssText = `\
+        background-color: rgb(51, 104, 209);
+        color: white;
+      `;
+    }
+    rendered.innerText = x;
+
+    if(i === pieces.length - 1) {
+      rendered.dataset.base_index = cell.counter;
+      cell.counter += x.length;
+      if(i !== 0)
+        cell.line_start = (x.length === 0);
+      return [rendered];
+    } else {
+      if(x.length === 0 && cell.line_start) {
+        rendered.innerText = '\u00A0';
+        rendered.dataset.blank_line = true;
+      }
+      rendered.dataset.base_index = cell.counter;
+      cell.counter += x.length;
+      cell.counter += 1;  // For the newline
+      return [rendered, document.createElement('br')];
+    }
+  });
+};
+
+//    .replace(/\n$/g, (match) => ('\n\u00A0'))
+
+const render_helper = ({div, text_value, notify}) => {
+  throw notify('not implemented yet');
+
+  const cell = {counter: 0, line_start: true};
+  const matches = text_value.matchAll(/(\s+)|(\S+)/g);
+  matches.flatMap((match) => {
+    if(match[1] !== undefined) {
+      return match[1].map((c) => {
+        if(c === '\n') {
+          return [document.createElement('br')];
+        } else {
+          return 
+        }
+      });
+    } else if(match[2] !== undefined) {
+      const span = document.createElement('span');
+      span.innerText = '\u00A0';
+      span.dataset.base_index = text_value.length;
+      span.dataset.blank_line = true;
+      return [span];{
+      const rendered = document.createElement('span');
+      if(selected) {
+        rendered.style.cssText = `\
+          background-color: rgb(51, 104, 209);
+          color: white;
+        `;
+      }
+      rendered.innerText = x;
+
+      if(i === pieces.length - 1) {
+        rendered.dataset.base_index = cell.counter;
+        cell.counter += x.length;
+        if(i !== 0)
+          cell.line_start = (x.length === 0);
+        return [rendered];
+      } else {
+        if(x.length === 0 && cell.line_start) {
+          rendered.innerText = '\u00A0';
+          rendered.dataset.blank_line = true;
+        }
+        rendered.dataset.base_index = cell.counter;
+        cell.counter += x.length;
+        cell.counter += 1;  // For the newline
+        return [rendered, document.createElement('br')];
+      }
+    }
+    } else {
+      throw notify(1264);
+    }
+  });
+
+  // Old code:
+//  editor.append(
+//    ...fix_whitespace(text_value.slice(0, selection_0), cell),
+//    ...maybe_create_caret(selection_end === selection_0),
+//    ...fix_whitespace(text_value.slice(selection_0, selection_1), cell, {selected: true}),
+//    ...maybe_create_caret(selection_end !== selection_0),
+//    ...fix_whitespace(text_value.slice(selection_1), cell),
+//    ...(() => {
+//      if(text_value.slice(-1)[0] === '\n') {
+//        return [(() => {
+//          const ret = document.createElement('span');
+//          ret.innerText = '\u00A0';
+//          ret.dataset.base_index = text_value.length;
+//          ret.dataset.blank_line = true;
+//          return ret;
+//        })()];
+//      } else {
+//        return [];
+//      }
+//    })(),
+//  );
+};
+
 const make_textarea = ({on_change, on_undo, on_redo, notify}) => {
   let text_value = '';
   let selection_start = 0;
@@ -231,7 +375,6 @@ const make_textarea = ({on_change, on_undo, on_redo, notify}) => {
     padding: 10px;
     width: 90%;
     min-height: 100px;
-    white-space: pre;
     outline: none;
     line-height: 1.5;
     margin: 20px;
@@ -240,19 +383,16 @@ const make_textarea = ({on_change, on_undo, on_redo, notify}) => {
   editor.setAttribute('tabindex', 0);
 
   const render = () => {
-    const maybe_cursor = (() => {
-      if(document.activeElement === editor)
-        return '█';
+    const maybe_create_caret = (additional_constraint) => {
+      if(additional_constraint  &&  document.activeElement === editor)
+        return [create_caret(), '\u2060'];
       else
-        return '';
-    })();
+        return [];
+    };
     const selection_0 = Math.min(selection_start, selection_end);
     const selection_1 = Math.max(selection_start, selection_end);
-    editor.textContent = (
-        text_value.slice(0, selection_0)
-      + maybe_cursor + text_value.slice(selection_0, selection_1)
-      + maybe_cursor + text_value.slice(selection_1)
-    );
+    editor.innerHTML = '';
+    render_helper({div: editor, text_value, notify});
   };
 
   editor.addEventListener('keydown', async(e) => {
@@ -268,6 +408,28 @@ const make_textarea = ({on_change, on_undo, on_redo, notify}) => {
       text_value = process_keydown_2({new_value, prev_value, start_0, end_0, event: e, on_undo, on_redo, on_change, notify});
       render();
     }
+  });
+
+  editor.addEventListener('click', (e) => {
+    e.preventDefault();
+
+    const r = document.caretPositionFromPoint(e.clientX, e.clientY);
+    if(r === null)
+      return;
+
+    const {offsetNode: node, offset} = r;
+
+    if(node.parentElement.dataset.blank_line)
+      selection_end = +node.parentElement.dataset.base_index;
+    else
+      selection_end = +node.parentElement.dataset.base_index + offset;
+
+    console.log({base_index: node.parentElement.dataset.base_index, offset});
+
+    if(!e.shiftKey)
+      selection_start = selection_end;
+
+    render();
   });
 
   editor.addEventListener('focus', render);
