@@ -1384,6 +1384,9 @@ const main = async() => {
   while(true) {
     const deferrer = make_deferrer();
     try {
+      highest_id_received_state.set(0);
+      highest_id_sent_state.set(0);
+      latest_history_state.set(0);
       await old_main({socket_io, defer: deferrer.defer});
       await sleep(1000);
     } catch(e) {
