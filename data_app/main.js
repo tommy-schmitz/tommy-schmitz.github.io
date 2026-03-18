@@ -886,6 +886,7 @@ const deserialize_varnum = (array, index) => {
 };
 
 const serialize = (history) => {
+  let compressed_history_helper = '';
   const sorted_history = [...history].sort((a, b) => {
     const t1 = round_down_to_nearest(a.timestamp, 5000);
     const t2 = round_down_to_nearest(b.timestamp, 5000);
@@ -931,14 +932,23 @@ const serialize = (history) => {
       array.push(...new TextEncoder().encode(text));
       baseline = id;
     } else if(item.type === 'compressed history') {
-      array.push(...decode_binary(item.serialization.text));
+      if(true) {
+        if(item !== history[0])
+          throw notify(1265);
+        compressed_history_helper = item.serialization.text;
+      } else {
+        //const bytes = decode_binary(item.serialization.text);
+        //for(let i=0; i<bytes.length; ++i)  // Note: can't use .push(...bytes) b/c overflows stack
+        //  array.push(bytes[i]);
+      }
+
       time = item.serialization.time;
       baseline = item.serialization.baseline;
     } else {
       throw notify(1244);
     }
   }
-  return {text: encode_binary(array), time, baseline};
+  return {text: compressed_history_helper + encode_binary(array), time, baseline};
 };
 
 const deserialize = (str) => {
