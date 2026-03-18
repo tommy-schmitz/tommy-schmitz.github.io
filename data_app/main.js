@@ -430,6 +430,8 @@ const get_encrypted_channel = async({ui, socket_io, handle_decrypted_message: li
 
   const send_encrypted_data = async(data) => {
     const plaintext = JSON.stringify(data);
+    if(plaintext.length > 5e5)
+      throw new Error('long plaintext: ' + plaintext.length);
     const ciphertext = await encrypt(symmetric_key, plaintext);
     sock.emit('interlocutor should hear', {type: 'encrypted', ciphertext});
   };
