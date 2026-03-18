@@ -595,6 +595,7 @@ const sort_history = (history) => {
 };
 
 const highest_id_received_state = (() => {let state = 0; return {get: () => (state), set: (x) => {state = x;}};})();
+const latest_history_state = (() => {let state = 0; return {get: () => (state), set: (x) => {state = x;}};})();
 
 const handle_network_operations = (() => {
   return ({send_encrypted_data, changes, editor, main_data: data, self_device_id, ephemeral_data, enqueue_a_save_to_disk}) => {
@@ -1100,7 +1101,12 @@ const compute_initial_text = async({send_encrypted_data, self_device_id, interlo
   const other_latest_history_id = await interlocutor_latest_history.promise;
   console.log({other_latest_history_id});
   const replayed = replay(stored_history);
-  send_encrypted_data({type: 'latest history', value: filter_network_operations({network_operations: stored_history, seen_id: other_latest_history_id, self_device_id})});  // async
+  const to_send = filter_network_operations({network_operations: stored_history, seen_id: other_latest_history_id, self_device_id});
+  const CHUNK = 2000;
+  for(let i=0; i<to_send.length; i+=CHUNK)
+    send_encrypted_data({type: 'latest history', chunk: to_send.slice(i, i+CHUNK), i, total_count: to_send.length});  // asynchronous action
+  if(to_send.length === 0)
+    send_encrypted_data({type: 'latest history', chunk: [], i: 0, total_count: 0});  // asynchronous action
   save_replay({replayed, main_data: data, ephemeral_data});
   data.history.splice(0, data.history.length, ...replayed.state_1.history);
   return data.current.map(({c}) => (c)).join('');
@@ -1151,10 +1157,11 @@ const initialize_network_manager = ({send_encrypted_data, self_device_id}) => {
     while(true) {
       console.log('syncing');
       const ack = highest_id_received_state.get();
-      if(to_be_sent.length > 0  ||  highest_ack_sent < ack) {
-        await send_encrypted_data({type: 'changes', value: to_be_sent, highest_id_received: ack});
-        if(to_be_sent.length > 0)
-          highest_id_sent_state.set(to_be_sent.slice(-1)[0].id);
+      const chunk = to_be_sent.slice(0, 2000);
+      if(chunk.length > 0  ||  highest_ack_sent < ack) {
+        await send_encrypted_data({type: 'changes', value: chunk, highest_id_received: ack});
+        if(chunk.length > 0)
+          highest_id_sent_state.set(chunk.slice(-1)[0].id);
         highest_ack_sent = ack;
       }
       await sleep((ENABLE_SLOWER_SYNCHRONIZATION) ? 7000 : 1000);
@@ -1268,9 +1275,11 @@ const old_main = async({socket_io, defer}) => {
     } else if(parsed.type === 'latest clock') {
       interlocutor_latest_history.resolve(parsed.value);
     } else if(parsed.type === 'latest history') {
-      console.log('Received operations:', parsed.value);
-      handle_network_operations_(parsed.value);
-      done_processing_latest_history.resolve();
+      console.log('Received operations:', parsed);
+      latest_history_state.set(latest_history_state.get() + parsed.chunk.length);
+      handle_network_operations_(parsed.chunk);
+      if(latest_history_state.get() === parsed.total_count)
+        done_processing_latest_history.resolve();
     } else {
       console.warn('Unrecognized message type (2):', parsed.type);
     }
