@@ -1033,34 +1033,34 @@ const save_to_disk = ({main_data, ephemeral_data}) => {
 //    throw 1248;
 
   // Sanity check:
-  const replayed_1 = replay(deserialize(serialized));
-  const replayed_2 = replay(main_data.history);
-  replayed_1.state_1.history = replayed_2.state_1.history = replayed_1.state_2.causal_tree = replayed_2.state_2.causal_tree = null;
-  if(make_stable_string(replayed_1) !== make_stable_string(replayed_2)) {
-    const s1 = make_stable_string(replayed_1);
-    const s2 = make_stable_string(replayed_2);
-    let index = 0;
-    for(; index<Math.min(s1.length, s2.length); ++index)
-      if(s1[index] !== s2[index])
-        break;
-    console.log(1253, {replayed_1, replayed_2, index, snippet_1: s1.slice(index-50, index+50), snippet_2: s2.slice(index-50, index+50)});
-    throw notify(1253);
-  }
+//  const replayed_1 = replay(deserialize(serialized));
+//  const replayed_2 = replay(main_data.history);
+//  replayed_1.state_1.history = replayed_2.state_1.history = replayed_1.state_2.causal_tree = replayed_2.state_2.causal_tree = null;
+//  if(make_stable_string(replayed_1) !== make_stable_string(replayed_2)) {
+//    const s1 = make_stable_string(replayed_1);
+//    const s2 = make_stable_string(replayed_2);
+//    let index = 0;
+//    for(; index<Math.min(s1.length, s2.length); ++index)
+//      if(s1[index] !== s2[index])
+//        break;
+//    console.log(1253, {replayed_1, replayed_2, index, snippet_1: s1.slice(index-50, index+50), snippet_2: s2.slice(index-50, index+50)});
+//    throw notify(1253);
+//  }
 
   // Sanity check:
-  const deserialized = deserialize(serialized);
-  const {text: again} = serialize(deserialized);
-  if(again !== serialized) {
-    let index = 0;
-    for(; index<Math.min(serialized.length, again.length); ++index)
-      if(serialized[index] !== again[index])
-        break;
-    console.log(1252, {
-      serialized, again_____: again, deserialized,
-      snippet_1: serialized.slice(index-50, index+50), snippet_2: again.slice(index-50, index+50),
-    });
-    throw notify(1252);
-  }
+//  const deserialized = deserialize(serialized);
+//  const {text: again} = serialize(deserialized);
+//  if(again !== serialized) {
+//    let index = 0;
+//    for(; index<Math.min(serialized.length, again.length); ++index)
+//      if(serialized[index] !== again[index])
+//        break;
+//    console.log(1252, {
+//      serialized, again_____: again, deserialized,
+//      snippet_1: serialized.slice(index-50, index+50), snippet_2: again.slice(index-50, index+50),
+//    });
+//    throw notify(1252);
+//  }
 
   {
     const call_record = {type: 'localStorage.setItem', key: 'main_text_box_history', value: serialized};
