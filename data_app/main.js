@@ -555,27 +555,34 @@ const sort_history = (history) => {
     }
   }
 
-  const dfs = (id) => {
-    if(in_progress[id])
-      throw notify(1243);
+  const stack = [0];
+  while(stack.length > 0) {
+    const id = stack.pop();
 
-    if(finished[id])
-      return;
+    if(id < 0 || Object.is(id, -0)) {
+      delete in_progress[-id];
+      finished[-id] = 1;
+    } else {
+      if(in_progress[id])
+        throw notify(1243);
 
-    in_progress[id] = 1;
+      if(finished[id]) {
+        console.log('interesting');
+        continue;
+      }
 
-    if(id !== 0)
-      result.push(lookup_table[id]);
+      in_progress[id] = 1;
 
-    graph[id]?.sort((a, b) => (b - a));
-    for(const child of (graph[id] || []))
-      dfs(child);
+      if(id !== 0)
+        result.push(lookup_table[id]);
 
-    delete in_progress[id];
-    finished[id] = 1;
+      stack.push(-id);
+
+      graph[id]?.sort((a, b) => (a - b));  // Note: Can't use .sort() because [10,2].sort() is [10,2]
+      for(const child of (graph[id] || []))
+        stack.push(child);
+    }
   };
-
-  dfs(0);
 
   // Raise an error if there are any unreachable nodes.
   for(const id in lookup_table)
