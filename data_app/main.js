@@ -1097,6 +1097,15 @@ const save_replay = ({replayed, main_data: data, ephemeral_data}) => {
   ephemeral_data.clock = replayed.state_2.clock;
 };
 
+// Print stored text in console for ease of access:
+{
+  const stored = localStorage.getItem('main_text_box_history');
+  const stored_history = ((stored === null) ? [] : deserialize(stored));
+  const replayed = replay(stored_history);
+  const stored_text = replayed.state_1.current.map(({c}) => (c)).join('');
+  console.log({stored_text});
+}
+
 const compute_initial_text = async({send_encrypted_data, self_device_id, interlocutor_latest_history, main_data: data, ephemeral_data}) => {
   const stored = (() => {
     if(ENABLE_SIMULATION) {
