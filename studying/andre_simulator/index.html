@@ -1,0 +1,238 @@
+<script>
+/*
+Looking at the value function, it's quite complicated, but it appears to be maximizing a quantity using adjustable levers Consumption and Saving and LaborHours, where the maximized quantity includes the present period utility according to the u function plus the discounted expectation of the value of all future periods combined (base case will be when j is J+1 and agent is experiencing death). Constraints include positivity of Consumption, nonnegativity of Saving, and LaborHours from zero to one inclusive. Constraints also include defining the number of children as either zero or ((j <= 6) ? 0 : (7 <= j && j <= 9) ? 1 : (10 <= j && j <= 12) ? 2 : (13 <= j && j <= 24) ? 3 : (25 <= j && j <= 27) ? 2 : (28 <= j && j <= 30) ? 1 : 0). Constraints also include defining how human capital changes between periods (I have yet to look this up precisely). Constraints also include defining paycheck as ambient wage level times individual productivity factor times individual ability factor times human capital times effective labor hours (raw LaborHours minus constant l bar). Finally, constraints include defining your next period assets as the summation of your previous assets plus interest plus paycheck reduced by payroll tax plus EITC plus SNAP plus TANF minus consumption minus consumption taxes minus childcare costs (either zero or eta if k=1 and currently laboring and current age is 27 through 35 inclusive) minus income tax.
+*/
+
+
+const main = async() => {
+
+
+// Parameters:
+const J = 80;
+const JR = 45;
+let period = 1;
+let assets = 0;
+let humanCapital = 1.0;
+let productivity = 0.0;
+let cumulative_utility = 0;
+const theta = ((Math.random() < 0.5) ? .009 : -.009);   // Ability
+const beta = 0.996;     // Discount factor ("impatience")
+const phi = 58.36;      // Disutility of labor
+const gamma = 0.6;      // Additional disutility of labor
+const r = 0.04;         // Interest rate
+const w = 50000.0;      // Wage market rate
+const l_bar = 0.08;     // Fixed time cost of labor
+const b_SS = 0.36;      // Social Security income replacement percentage
+const delta_h = 0.015;  // Human capital decay when not working
+const nu_1 = 0.0455;    // Human capital increase when working
+const nu_2 = -0.001;    // Additional human capital increase when working
+const rho = 0.9766;     // Persistence of productivity z
+const epsilon_stddev = Math.sqrt(.0243);        // Variance of increment of productivity z
+
+function gaussianRandom(mean = 0, stdev = 1) {
+  let u1, u2, r;
+  do {
+    u1 = 2 * Math.random() - 1; // Range: -1 to 1
+    u2 = 2 * Math.random() - 1; // Range: -1 to 1
+    r = u1 * u1 + u2 * u2;
+  } while (r === 0 || r >= 1); // Reject points outside the unit circle
+  const c = Math.sqrt(-2 * Math.log(r) / r);
+  return u1 * c * stdev + mean;
+}
+
+const basic_parsing = () => {
+  const c = parseFloat(document.getElementById('c').value);
+  const l = parseFloat(document.getElementById('l').value);
+  const aPrime = parseFloat(document.getElementById('aprime').value);
+
+  if([c, l, aPrime].some(isNaN))
+    throw "Error: All inputs must be valid numbers.";
+  if(c <= 0)
+    throw "Error: Consumption must be positive.";
+  if(l < 0 || l > 1)
+    throw "Error: Labor hours must be from 0 to 1 (inclusive).";
+  if(aPrime < 0)
+    throw "Error: Next assets cannot be negative.";
+
+  return {c, l, aPrime};
+};
+
+const calculations = () => {
+  const {c, l, aPrime} = basic_parsing();
+
+  const isRetired = (period >= JR);
+
+  if(isRetired && l > 0)
+    throw 'Error: You are retired. You can no longer work.';
+
+  const effectiveL = getEffectiveLabor(l);
+
+  const income = (() => {
+    if(isRetired) {
+      const social_security = b_SS * AE(period);
+      return social_security;
+    } else {
+      const earnings = w * Math.exp(productivity + theta) * humanCapital * effectiveL;
+      return earnings;
+    }
+  })();
+
+  const resources = (1 + r) * assets + income;
+
+  const impliedConsumption = resources - aPrime;
+  const implied_new_assets = resources - c;
+
+  if(Math.abs(impliedConsumption - c) > 0.005)
+    throw (`Error: Your chosen c and a' are not consistent. Change c to ${impliedConsumption.toFixed(2)} or `
+          +`change a' to ${implied_new_assets.toFixed(2)}`);
+
+  const u = utility(c, l);
+
+  const new_human_capital = (() => {
+    if(l > l_bar) {
+      return humanCapital * Math.exp(nu_1 - nu_2 * period);
+    } else {
+      return humanCapital * Math.exp(-delta_h);
+    }
+  })();
+
+  return {c, l, aPrime, income, u, new_human_capital};
+};
+
+const advancePeriod = () => {
+  const errorDiv = document.getElementById('error');
+  errorDiv.innerHTML = '&nbsp;';
+  try {
+    const {c, l, aPrime, income, u, new_human_capital} = calculations();
+
+    // Update state:
+    assets = aPrime;
+    humanCapital = new_human_capital;
+    cumulative_utility += u;
+    productivity = rho * productivity + gaussianRandom(0, epsilon_stddev);
+    period += 1;
+
+    // Update UI:
+    const outputDiv = document.getElementById('output');
+    outputDiv.innerHTML = `\
+        <strong>Period ${period - 1}:</strong><br>
+        Consumption: ${c.toFixed(3)} | Labor: ${l.toFixed(3)} | Assets next: ${assets.toFixed(3)}<br>
+        Income: ${income.toFixed(3)} | Utility: ${u.toFixed(4)} | Human Capital: ${humanCapital.toFixed(3)}<br>
+        Cumulative utility: ${cumulative_utility.toFixed(3)} | Productivity z: ${productivity.toFixed(3)}<br>
+        ─────────────────────────────<br>
+    ` + outputDiv.innerHTML;
+    document.getElementById('period').textContent = period;
+
+    // Special UI update at end of life:
+    if(period > J) {
+      outputDiv.innerHTML = "<strong style='color:green'>Life ended at period 80.</strong><br>" + outputDiv.innerHTML;
+      document.querySelector('button').disabled = true;
+    }
+  } catch(e) {
+    errorDiv.innerHTML = e;
+  }
+};
+
+const AE = (period) => {  // AE stands for Average Earnings.
+  return w;  // Is this definition correct? Probably not.
+};
+
+function utility(c, l) {
+  if (c <= 0) return -Infinity;
+  const consumptionUtility = Math.log(c);
+  const laborDisutility = phi * Math.pow(l, 1 + 1/gamma) / (1 + 1/gamma);
+  return consumptionUtility - laborDisutility;
+}
+
+function getEffectiveLabor(l) {
+  return Math.max(0, l - l_bar);
+}
+
+// Create container
+const container = document.createElement('div');
+container.className = 'container';
+
+// Title
+const h1 = document.createElement('h1');
+h1.textContent = 'Luduvice Model - Single Life Simulator';
+container.appendChild(h1);
+
+// Current Period
+const periodP = document.createElement('p');
+const strongPeriod = document.createElement('strong');
+strongPeriod.textContent = 'Current Period: ';
+const spanPeriod = document.createElement('span');
+spanPeriod.id = 'period';
+spanPeriod.textContent = '1';
+strongPeriod.appendChild(spanPeriod);
+strongPeriod.append(' / ' + J);
+periodP.appendChild(strongPeriod);
+container.appendChild(periodP);
+
+// Actions
+const h3 = document.createElement('h3');
+h3.textContent = 'Choose your actions this period:';
+container.appendChild(h3);
+
+// Inputs
+const labels = ['Consumption (c)', 'Labor Hours (l)', 'Next Assets (a\')'];
+const ids = ['c', 'l', 'aprime'];
+const values = ['1.0', '0.7', '0.0'];
+const steps = ['0.01', '0.01', '0.1'];
+const minMax = [null, { min: '0', max: '1' }, null];
+
+labels.forEach((labelText, i) => {
+  const label = document.createElement('label');
+  label.textContent = labelText + ': ';
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.id = ids[i];
+  input.step = steps[i];
+  input.value = values[i];
+  if (minMax[i]) {
+    Object.entries(minMax[i]).forEach(([k, v]) => input.setAttribute(k, v));
+  }
+  label.appendChild(input);
+  container.appendChild(label);
+  container.appendChild(document.createElement('br'));
+});
+
+// Button
+const button = document.createElement('button');
+button.textContent = 'Advance to Next Period';
+button.onclick = advancePeriod;
+container.appendChild(button);
+container.appendChild(document.createElement('br'));
+
+// Error and Output
+const errorDiv = document.createElement('div');
+errorDiv.id = 'error';
+errorDiv.style.cssText = 'color: red;';
+container.appendChild(errorDiv);
+
+const outputDiv = document.createElement('div');
+outputDiv.id = 'output';
+container.appendChild(outputDiv);
+
+// Append to body
+document.body.style.fontFamily = 'Arial, sans-serif';
+document.body.style.margin = '20px';
+document.body.appendChild(container);
+
+// Add styles
+const style = document.createElement('style');
+style.textContent = `
+  .container { max-width: 700px; }
+  input { width: 120px; padding: 6px; margin: 5px; }
+  button { padding: 10px 16px; font-size: 16px; }
+  #output { margin-top: 20px; font-family: monospace; line-height: 1.5; }
+`;
+document.head.appendChild(style);
+
+document.getElementById('output').innerHTML = `Simulation started. theta = ${theta}. Choose your actions and click 'Advance to Next Period'.<br><br>`;
+
+
+};
+
+window.onload = main;
+</script>
