@@ -1,10 +1,13 @@
 <script>
+
+// Note: most of this code is AI-generated.
+
 /*
 Looking at the value function, it's quite complicated, but it appears to be maximizing a quantity using adjustable levers Consumption and Saving and LaborHours, where the maximized quantity includes the present period utility according to the u function plus the discounted expectation of the value of all future periods combined (base case will be when j is J+1 and agent is experiencing death). Constraints include positivity of Consumption, nonnegativity of Saving, and LaborHours from zero to one inclusive. Constraints also include defining the number of children as either zero or ((j <= 6) ? 0 : (7 <= j && j <= 9) ? 1 : (10 <= j && j <= 12) ? 2 : (13 <= j && j <= 24) ? 3 : (25 <= j && j <= 27) ? 2 : (28 <= j && j <= 30) ? 1 : 0). Constraints also include defining how human capital changes between periods (I have yet to look this up precisely). Constraints also include defining paycheck as ambient wage level times individual productivity factor times individual ability factor times human capital times effective labor hours (raw LaborHours minus constant l bar). Finally, constraints include defining your next period assets as the summation of your previous assets plus interest plus paycheck reduced by payroll tax plus EITC plus SNAP plus TANF minus consumption minus consumption taxes minus childcare costs (either zero or eta if k=1 and currently laboring and current age is 27 through 35 inclusive) minus income tax.
 */
 
 
-const main = async() => {
+const main_scope = async() => {
 
 
 // Parameters:
@@ -148,91 +151,95 @@ function getEffectiveLabor(l) {
   return Math.max(0, l - l_bar);
 }
 
-// Create container
-const container = document.createElement('div');
-container.className = 'container';
+const initialize_ui = () => {
+  // Create container
+  const container = document.createElement('div');
+  container.className = 'container';
 
-// Title
-const h1 = document.createElement('h1');
-h1.textContent = 'Luduvice Model - Single Life Simulator';
-container.appendChild(h1);
+  // Title
+  const h1 = document.createElement('h1');
+  h1.textContent = 'Luduvice Model - Single Life Simulator';
+  container.appendChild(h1);
 
-// Current Period
-const periodP = document.createElement('p');
-const strongPeriod = document.createElement('strong');
-strongPeriod.textContent = 'Current Period: ';
-const spanPeriod = document.createElement('span');
-spanPeriod.id = 'period';
-spanPeriod.textContent = '1';
-strongPeriod.appendChild(spanPeriod);
-strongPeriod.append(' / ' + J);
-periodP.appendChild(strongPeriod);
-container.appendChild(periodP);
+  // Current Period
+  const periodP = document.createElement('p');
+  const strongPeriod = document.createElement('strong');
+  strongPeriod.textContent = 'Current Period: ';
+  const spanPeriod = document.createElement('span');
+  spanPeriod.id = 'period';
+  spanPeriod.textContent = '1';
+  strongPeriod.appendChild(spanPeriod);
+  strongPeriod.append(' / ' + J);
+  periodP.appendChild(strongPeriod);
+  container.appendChild(periodP);
 
-// Actions
-const h3 = document.createElement('h3');
-h3.textContent = 'Choose your actions this period:';
-container.appendChild(h3);
+  // Actions
+  const h3 = document.createElement('h3');
+  h3.textContent = 'Choose your actions this period:';
+  container.appendChild(h3);
 
-// Inputs
-const labels = ['Consumption (c)', 'Labor Hours (l)', 'Next Assets (a\')'];
-const ids = ['c', 'l', 'aprime'];
-const values = ['1.0', '0.7', '0.0'];
-const steps = ['0.01', '0.01', '0.1'];
-const minMax = [null, { min: '0', max: '1' }, null];
+  // Inputs
+  const labels = ['Consumption (c)', 'Labor Hours (l)', 'Next Assets (a\')'];
+  const ids = ['c', 'l', 'aprime'];
+  const values = ['1.0', '0.7', '0.0'];
+  const steps = ['0.01', '0.01', '0.1'];
+  const minMax = [null, { min: '0', max: '1' }, null];
 
-labels.forEach((labelText, i) => {
-  const label = document.createElement('label');
-  label.textContent = labelText + ': ';
-  const input = document.createElement('input');
-  input.type = 'number';
-  input.id = ids[i];
-  input.step = steps[i];
-  input.value = values[i];
-  if (minMax[i]) {
-    Object.entries(minMax[i]).forEach(([k, v]) => input.setAttribute(k, v));
-  }
-  label.appendChild(input);
-  container.appendChild(label);
+  labels.forEach((labelText, i) => {
+    const label = document.createElement('label');
+    label.textContent = labelText + ': ';
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.id = ids[i];
+    input.step = steps[i];
+    input.value = values[i];
+    if (minMax[i]) {
+      Object.entries(minMax[i]).forEach(([k, v]) => input.setAttribute(k, v));
+    }
+    label.appendChild(input);
+    container.appendChild(label);
+    container.appendChild(document.createElement('br'));
+  });
+
+  // Button
+  const button = document.createElement('button');
+  button.textContent = 'Advance to Next Period';
+  button.onclick = advancePeriod;
+  container.appendChild(button);
   container.appendChild(document.createElement('br'));
-});
 
-// Button
-const button = document.createElement('button');
-button.textContent = 'Advance to Next Period';
-button.onclick = advancePeriod;
-container.appendChild(button);
-container.appendChild(document.createElement('br'));
+  // Error and Output
+  const errorDiv = document.createElement('div');
+  errorDiv.id = 'error';
+  errorDiv.style.cssText = 'color: red;';
+  container.appendChild(errorDiv);
 
-// Error and Output
-const errorDiv = document.createElement('div');
-errorDiv.id = 'error';
-errorDiv.style.cssText = 'color: red;';
-container.appendChild(errorDiv);
+  const outputDiv = document.createElement('div');
+  outputDiv.id = 'output';
+  container.appendChild(outputDiv);
 
-const outputDiv = document.createElement('div');
-outputDiv.id = 'output';
-container.appendChild(outputDiv);
+  // Append to body
+  document.body.style.fontFamily = 'Arial, sans-serif';
+  document.body.style.margin = '20px';
+  document.body.appendChild(container);
 
-// Append to body
-document.body.style.fontFamily = 'Arial, sans-serif';
-document.body.style.margin = '20px';
-document.body.appendChild(container);
+  // Add styles
+  const style = document.createElement('style');
+  style.textContent = `
+    .container { max-width: 700px; }
+    input { width: 120px; padding: 6px; margin: 5px; }
+    button { padding: 10px 16px; font-size: 16px; }
+    #output { margin-top: 20px; font-family: monospace; line-height: 1.5; }
+  `;
+  document.head.appendChild(style);
 
-// Add styles
-const style = document.createElement('style');
-style.textContent = `
-  .container { max-width: 700px; }
-  input { width: 120px; padding: 6px; margin: 5px; }
-  button { padding: 10px 16px; font-size: 16px; }
-  #output { margin-top: 20px; font-family: monospace; line-height: 1.5; }
-`;
-document.head.appendChild(style);
+  document.getElementById('output').innerHTML = `Simulation started. theta = ${theta}. Choose your actions and click 'Advance to Next Period'.<br><br>`;
+};
 
-document.getElementById('output').innerHTML = `Simulation started. theta = ${theta}. Choose your actions and click 'Advance to Next Period'.<br><br>`;
+initialize_ui();
 
 
 };
 
-window.onload = main;
+window.onload = main_scope;
 </script>
