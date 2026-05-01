@@ -13,12 +13,13 @@ const main_scope = async() => {
 // Parameters:
 const J = 80;
 const JR = 45;
+const AVERAGE_ASSETS = 10000;   // For calculating initial assets. Let's just use an arbitrary number.
+const theta = ((Math.random() < 0.5) ? .009 : -.009);   // Ability
+let assets = ((theta < 0) ? 0 : 0.0133 * AVERAGE_ASSETS);
 let period = 1;
-let assets = 0;
 let humanCapital = 1.0;
 let productivity = 0.0;
 let cumulative_utility = 0;
-const theta = ((Math.random() < 0.5) ? .009 : -.009);   // Ability
 const beta = 0.996;     // Discount factor ("impatience")
 const phi = 58.36;      // Disutility of labor
 const gamma = 0.6;      // Additional disutility of labor
@@ -80,7 +81,9 @@ const calculations = () => {
     }
   })();
 
-  const resources = (1 + r) * assets + income;
+  const interest = r * assets;
+
+  const resources = assets + interest + income;
 
   const impliedConsumption = resources - aPrime;
   const implied_new_assets = resources - c;
@@ -99,29 +102,47 @@ const calculations = () => {
     }
   })();
 
-  return {c, l, aPrime, income, u, new_human_capital};
+  const new_productivity = rho * productivity + gaussianRandom(0, epsilon_stddev);
+
+  return {c, l, aPrime, income, u, new_human_capital, new_productivity, interest};
 };
 
 const advancePeriod = () => {
   const errorDiv = document.getElementById('error');
   errorDiv.innerHTML = '&nbsp;';
   try {
-    const {c, l, aPrime, income, u, new_human_capital} = calculations();
+    const result = calculations();
+    const {c, l, aPrime, income, u, new_human_capital, new_productivity, interest} = result;
 
     // Update state:
     assets = aPrime;
     humanCapital = new_human_capital;
     cumulative_utility += u;
-    productivity = rho * productivity + gaussianRandom(0, epsilon_stddev);
+    productivity = new_productivity;
     period += 1;
 
     // Update UI:
     const outputDiv = document.getElementById('output');
-    outputDiv.innerHTML = `\
-        <strong>Period ${period - 1}:</strong><br>
-        Consumption: ${c.toFixed(3)} | Labor: ${l.toFixed(3)} | Assets next: ${assets.toFixed(3)}<br>
-        Income: ${income.toFixed(3)} | Utility: ${u.toFixed(4)} | Human Capital: ${humanCapital.toFixed(3)}<br>
-        Cumulative utility: ${cumulative_utility.toFixed(3)} | Productivity z: ${productivity.toFixed(3)}<br>
+//    outputDiv.innerHTML = `\
+//        <strong>Period ${period - 1}:</strong><br>
+//        Consumption: ${c.toFixed(3)} | Labor: ${l.toFixed(3)} | Assets next: ${assets.toFixed(3)}<br>
+//        Income: ${income.toFixed(3)} | Utility: ${u.toFixed(4)} | Human Capital: ${humanCapital.toFixed(3)}<br>
+//        Cumulative utility: ${cumulative_utility.toFixed(3)} | Productivity z: ${productivity.toFixed(3)}<br>
+//        ─────────────────────────────<br>
+//    ` + outputDiv.innerHTML;
+    outputDiv.innerHTML = `
+        <strong>Period ${period - 1}:</strong><br><br>
+        • Consumption: <b>${result.c.toFixed(2)}</b><br>
+        • Labor: <b>${result.l.toFixed(3)}</b> (effective labor = ${(getEffectiveLabor(l)).toFixed(3)})<br>
+        • Assets carried to next period: <b>${result.aPrime.toFixed(2)}</b><br><br>
+
+        • Interest income: <b>${interest.toFixed(2)}</b><br>
+        • Other income: <b>${result.income.toFixed(2)}</b><br>
+        • Utility this period = <b>${result.u.toFixed(3)}</b><br>
+        • New human capital h = <b>${result.new_human_capital.toFixed(3)}</b><br>
+        • New productivity z = <b>${new_productivity.toFixed(3)}</b><br><br>
+
+        <strong>Cumulative utility:</strong> ${cumulative_utility.toFixed(3)}<br>
         ─────────────────────────────<br>
     ` + outputDiv.innerHTML;
     document.getElementById('period').textContent = period;
@@ -233,7 +254,13 @@ const initialize_ui = () => {
   `;
   document.head.appendChild(style);
 
-  document.getElementById('output').innerHTML = `Simulation started. theta = ${theta}. Choose your actions and click 'Advance to Next Period'.<br><br>`;
+  document.getElementById('output').innerHTML = `\
+    Simulation started.<br>
+    • theta = ${theta}<br>
+    • z = ${productivity}<br>
+    • assets = ${assets}<br>
+    Choose your actions and click 'Advance to Next Period'.
+  `;
 };
 
 initialize_ui();
