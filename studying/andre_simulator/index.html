@@ -11,15 +11,10 @@ const main_scope = async() => {
 
 
 // Parameters:
-const J = 80;
-const JR = 45;
+const J = 80;           // Death age (80 means 100 years old)
+const JR = 45;          // Retirement age (45 means 65 years old)
+const p_k = 0.3;        // The probability that an agent will decide to have kids.
 const AVERAGE_ASSETS = 10000;   // For calculating initial assets. Let's just use an arbitrary number.
-const theta = ((Math.random() < 0.5) ? .009 : -.009);   // Ability
-let assets = ((theta < 0) ? 0 : 0.0133 * AVERAGE_ASSETS);
-let period = 1;
-let humanCapital = 1.0;
-let productivity = 0.0;
-let cumulative_utility = 0;
 const beta = 0.996;     // Discount factor ("impatience")
 const phi = 58.36;      // Disutility of labor
 const gamma = 0.6;      // Additional disutility of labor
@@ -32,6 +27,16 @@ const nu_1 = 0.0455;    // Human capital increase when working
 const nu_2 = -0.001;    // Additional human capital increase when working
 const rho = 0.9766;     // Persistence of productivity z
 const epsilon_stddev = Math.sqrt(.0243);        // Variance of increment of productivity z
+const eta = 9600;       // Annual childcare costs
+
+// Agent-specific variables:
+const theta = ((Math.random() < 0.5) ? .009 : -.009);   // Ability
+const k = ((Math.random() < p_k) ? 1 : 0);      // This agent's decision to have kids or not.
+let assets = ((theta < 0) ? 0 : 0.0133 * AVERAGE_ASSETS);
+let period = 1;
+let humanCapital = 1.0;
+let productivity = 0.0;
+let cumulative_utility = 0;
 
 function gaussianRandom(mean = 0, stdev = 1) {
   let u1, u2, r;
@@ -82,8 +87,9 @@ const calculations = () => {
   })();
 
   const interest = r * assets;
+  const childcare_costs = compute_childcare_costs({j: period, k});
 
-  const resources = assets + interest + income;
+  const resources = assets + interest + income - childcare_costs;
 
   const impliedConsumption = resources - aPrime;
   const implied_new_assets = resources - c;
@@ -104,7 +110,7 @@ const calculations = () => {
 
   const new_productivity = rho * productivity + gaussianRandom(0, epsilon_stddev);
 
-  return {c, l, aPrime, income, u, new_human_capital, new_productivity, interest};
+  return {c, l, aPrime, income, u, new_human_capital, new_productivity, interest, childcare_costs};
 };
 
 const advancePeriod = () => {
@@ -112,7 +118,7 @@ const advancePeriod = () => {
   errorDiv.innerHTML = '&nbsp;';
   try {
     const result = calculations();
-    const {c, l, aPrime, income, u, new_human_capital, new_productivity, interest} = result;
+    const {c, l, aPrime, income, u, new_human_capital, new_productivity, interest, childcare_costs} = result;
 
     // Update state:
     assets = aPrime;
@@ -138,6 +144,7 @@ const advancePeriod = () => {
 
         • Interest income: <b>${interest.toFixed(2)}</b><br>
         • Other income: <b>${result.income.toFixed(2)}</b><br>
+        • Childcare costs = <b>${childcare_costs.toFixed(2)}</b><br>
         • Utility this period = <b>${result.u.toFixed(3)}</b><br>
         • New human capital h = <b>${result.new_human_capital.toFixed(3)}</b><br>
         • New productivity z = <b>${new_productivity.toFixed(3)}</b><br><br>
@@ -159,6 +166,32 @@ const advancePeriod = () => {
 
 const AE = (period) => {  // AE stands for Average Earnings.
   return w;  // Is this definition correct? Probably not.
+};
+
+const number_of_children = ({j, k}) => {
+  if(k === 0)
+    return 0;
+  if(j <= 6)
+    return 0;
+  if(j <= 9)
+    return 1;
+  if(j <= 12)
+    return 2;
+  if(j <= 24)
+    return 3;
+  if(j <= 27)
+    return 2;
+  if(j <= 30)
+    return 1;
+  return 0;
+};
+
+const compute_childcare_costs = ({j, k}) => {
+  if(k === 0)
+    return 0;
+  if(j >= 7  &&  j <= 15)  // During these years, the agent has exactly one child of age 0 or 1 or 2.
+    return eta;
+  return 0;
 };
 
 function utility(c, l) {
@@ -256,8 +289,9 @@ const initialize_ui = () => {
 
   document.getElementById('output').innerHTML = `\
     Simulation started.<br>
-    • theta = ${theta}<br>
-    • z = ${productivity}<br>
+    • ability theta = ${theta}<br>
+    • productivity z = ${productivity}<br>
+    • fertility k = ${k}<br>
     • assets = ${assets}<br>
     Choose your actions and click 'Advance to Next Period'.
   `;
