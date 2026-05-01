@@ -298,7 +298,25 @@ const initialize_ui = () => {
     • assets = ${assets}<br>
     Choose your actions and click 'Advance to Next Period'.<br>
 
-    <pre>// Listing of constants:
+    <pre>
+    // Listing of formulas:
+    theta = ((Math.random() < 0.5) ? .009 : -.009);  // This agent's ability level.
+    k = ((Math.random() < p_k) ? 1 : 0);             // This agent's decision to have kids or not.
+    is_retired = (j >= JR);
+    effective_labor = Math.max(0, l - l_bar);
+    potential_earnings = w * Math.exp(current_z + theta) * current_h * effective_labor;
+    potential_social_security = b_SS * AverageEarnings;
+    other_income = ((is_retired) ? potential_earnings : potential_social_security);
+    interest = r * current_assets;
+    childcare_costs = ((k === 0) ? 0 : (j >= 7 && j < 15) ? eta : 0);
+    new_assets_should_equal = current_assets + interest + other_income - childcare_costs - c;
+    immediate_utility = Math.log(c) - phi * Math.pow(l, 1 + 1/gamma) / (1 + 1/gamma);
+    increased_h = current_h * Math.exp(nu_1 - nu_2 * j);
+    decreased_h = current_h * Math.exp(-delta_h);
+    new_h = ((l > l_bar) ? increased_h : decreased_h);
+    new_z = rho * current_z + gaussianRandom(0, epsilon_stddev);
+
+    // Listing of constants:
     const J = 80;           // Death age (80 means 100 years old)
     const JR = 45;          // Retirement age (45 means 65 years old)
     const p_k = 0.3;        // The probability that an agent will decide to have kids.
@@ -314,8 +332,9 @@ const initialize_ui = () => {
     const nu_1 = 0.0455;    // Human capital increase when working
     const nu_2 = -0.001;    // Additional human capital increase when working
     const rho = 0.9766;     // Persistence of productivity z
-    const epsilon_stddev = Math.sqrt(.0243);        // Variance of increment of productivity z
-    const eta = 9600;       // Annual childcare costs</pre>
+    const epsilon_stddev = Math.sqrt(.0243);    // Variance of increment of productivity z
+    const eta = 9600;       // Annual childcare costs
+    const AverageEarnings = w;  // This definition is probably incorrect.</pre>
   `;
 };
 
