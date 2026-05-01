@@ -3,7 +3,7 @@
 // Note: most of this code is AI-generated.
 
 /*
-Looking at the value function, it's quite complicated, but it appears to be maximizing a quantity using adjustable levers Consumption and Saving and LaborHours, where the maximized quantity includes the present period utility according to the u function plus the discounted expectation of the value of all future periods combined (base case will be when j is J+1 and agent is experiencing death). Constraints include positivity of Consumption, nonnegativity of Saving, and LaborHours from zero to one inclusive. Constraints also include defining the number of children as either zero or ((j <= 6) ? 0 : (7 <= j && j <= 9) ? 1 : (10 <= j && j <= 12) ? 2 : (13 <= j && j <= 24) ? 3 : (25 <= j && j <= 27) ? 2 : (28 <= j && j <= 30) ? 1 : 0). Constraints also include defining how human capital changes between periods (I have yet to look this up precisely). Constraints also include defining paycheck as ambient wage level times individual productivity factor times individual ability factor times human capital times effective labor hours (raw LaborHours minus constant l bar). Finally, constraints include defining your next period assets as the summation of your previous assets plus interest plus paycheck reduced by payroll tax plus EITC plus SNAP plus TANF minus consumption minus consumption taxes minus childcare costs (either zero or eta if k=1 and currently laboring and current age is 27 through 35 inclusive) minus income tax.
+Notes to self: Looking at the value function, it's quite complicated, but it appears to be maximizing a quantity using adjustable levers Consumption and Saving and LaborHours, where the maximized quantity includes the present period utility according to the u function plus the discounted expectation of the value of all future periods combined (base case will be when j is J+1 and agent is experiencing death). Constraints include positivity of Consumption, nonnegativity of Saving, and LaborHours from zero to one inclusive. Constraints also include defining the number of children as either zero or ((j <= 6) ? 0 : (7 <= j && j <= 9) ? 1 : (10 <= j && j <= 12) ? 2 : (13 <= j && j <= 24) ? 3 : (25 <= j && j <= 27) ? 2 : (28 <= j && j <= 30) ? 1 : 0). Constraints also include defining how human capital changes between periods (I have yet to look this up precisely). Constraints also include defining paycheck as ambient wage level times individual productivity factor times individual ability factor times human capital times effective labor hours (raw LaborHours minus constant l bar). Finally, constraints include defining your next period assets as the summation of your previous assets plus interest plus paycheck reduced by payroll tax plus EITC plus SNAP plus TANF minus consumption minus consumption taxes minus childcare costs (either zero or eta if k=1 and currently laboring and current age is 27 through 35 inclusive) minus income tax.
 */
 
 
@@ -215,6 +215,8 @@ const initialize_ui = () => {
   h1.textContent = 'Luduvice Model - Single Life Simulator';
   container.appendChild(h1);
 
+  container.appendChild(document.createTextNode('Note: government benefits and taxes are not yet implemented in this version of the simulator.'));
+
   // Current Period
   const periodP = document.createElement('p');
   const strongPeriod = document.createElement('strong');
@@ -290,10 +292,30 @@ const initialize_ui = () => {
   document.getElementById('output').innerHTML = `\
     Simulation started.<br>
     • ability theta = ${theta}<br>
+    • human capital h = ${humanCapital}<br>
     • productivity z = ${productivity}<br>
     • fertility k = ${k}<br>
     • assets = ${assets}<br>
-    Choose your actions and click 'Advance to Next Period'.
+    Choose your actions and click 'Advance to Next Period'.<br>
+
+    <pre>// Listing of constants:
+    const J = 80;           // Death age (80 means 100 years old)
+    const JR = 45;          // Retirement age (45 means 65 years old)
+    const p_k = 0.3;        // The probability that an agent will decide to have kids.
+    const AVERAGE_ASSETS = 10000;   // For calculating initial assets. Let's just use an arbitrary number.
+    const beta = 0.996;     // Discount factor ("impatience")
+    const phi = 58.36;      // Disutility of labor
+    const gamma = 0.6;      // Additional disutility of labor
+    const r = 0.04;         // Interest rate
+    const w = 50000.0;      // Wage market rate
+    const l_bar = 0.08;     // Fixed time cost of labor
+    const b_SS = 0.36;      // Social Security income replacement percentage
+    const delta_h = 0.015;  // Human capital decay when not working
+    const nu_1 = 0.0455;    // Human capital increase when working
+    const nu_2 = -0.001;    // Additional human capital increase when working
+    const rho = 0.9766;     // Persistence of productivity z
+    const epsilon_stddev = Math.sqrt(.0243);        // Variance of increment of productivity z
+    const eta = 9600;       // Annual childcare costs</pre>
   `;
 };
 
