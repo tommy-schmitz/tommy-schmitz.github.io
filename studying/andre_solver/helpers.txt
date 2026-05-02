@@ -1,12 +1,18 @@
 function div(a, b, precision) {
+//    console.error({a,b,precision});
     if (b.mantissa === 0n) throw new Error("Division by zero");
-    const p1 = BigInt((a.mantissa+'').length - 1);
-    const p2 = BigInt((b.mantissa+'').length - 1);
-    const e = (precision + p2 - p1);
-    const scale = 10n ** e;
-    const scaledNumerator = a.mantissa * scale;
+    const p1 = BigInt((a.mantissa+'').length);
+    const p2 = BigInt((b.mantissa+'').length);
+    const expt = (precision + p2 - p1);
+    const scaledNumerator = (() => {
+      if(expt < 0n)
+        return a.mantissa / (10n ** -expt);
+      else
+        return a.mantissa * (10n ** expt);
+    })();
     const mantissa = scaledNumerator / b.mantissa;
-    const exponent = a.exponent - b.exponent - e;
+//    console.error({z1: a.exponent, z2: b.exponent, z3: expt, a, b, precision});
+    const exponent = a.exponent - b.exponent - expt;
     return { mantissa, exponent };
 }
 
@@ -59,4 +65,35 @@ function exp(x, precision) {
     }
 
     return { mantissa: result / 1000n, exponent: -precision };
+}
+
+function ln(x, precision) {
+    const p = BigInt(precision) + 3n;
+    const scale = 10n ** p;
+    const one = scale;
+    const two = 2n * scale;
+
+    // Reduce x to (x-1)/(x+1) for artanh series
+    const shifted = div({mantissa: x.mantissa - 1n, exponent: x.exponent}, 
+                        {mantissa: x.mantissa + 1n, exponent: x.exponent}, p);
+
+    let term = shifted;
+    let result = term;
+    let n = 1n;
+
+    let count = 0;
+    while (term.mantissa !== 0n) {
+        ++count;
+//        if(count > 100)
+//          throw 'too long';
+        term = mul(term, mul(shifted, shifted));
+        n += 2n;
+        const temp = {mantissa: n, exponent: 0n};
+//        console.error('ymmot1', {term, temp, p});
+        const next = div(term, temp, p);
+        if (next.mantissa === 0n) break;
+        result = add(result, next);
+    }
+
+    return mul(result, {mantissa: 2n, exponent: 0n});
 }
