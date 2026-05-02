@@ -57,7 +57,7 @@ function exp(x, precision) {
         return x.mantissa / (10n ** -expt);
     })();
 
-    while (term > 0n) {
+    while (term !== 0n) {
         term = (term * xScaled) / (n * scale);
         if (term === 0n) break;
         result += term;
