@@ -67,33 +67,63 @@ function exp(x, precision) {
     return { mantissa: result / 1000n, exponent: -precision };
 }
 
+function negate({mantissa, exponent}) {
+  return {mantissa: -mantissa, exponent};
+}
+
 function ln(x, precision) {
+  // From https://en.wikipedia.org/wiki/Natural_logarithm#High_precision
+  const internal_precision = 2n * precision;
+  let y = {mantissa: 1n, exponent: 0n};
+  while(true) {
+    const old = y;
+    y = add(y, mul({mantissa: 2n, exponent: 0n}, div(
+      add(x, negate(exp(y, precision))),
+      add(x, exp(y, internal_precision)),
+      internal_precision,
+    )));
+    const diff = add(y, negate(old));
+    if((diff.mantissa / (10n ** (precision + 3n))) === 0n)
+      break;
+  }
+  return y;
+}
+
+function pow(x, y, precision) {
+  return exp(mul(y, ln(x, precision)), precision);
+}
+
+
+
+
+
     const p = BigInt(precision) + 3n;
     const scale = 10n ** p;
     const one = scale;
-    const two = 2n * scale;
 
     // Reduce x to (x-1)/(x+1) for artanh series
-    const shifted = div({mantissa: x.mantissa - 1n, exponent: x.exponent}, 
-                        {mantissa: x.mantissa + 1n, exponent: x.exponent}, p);
+    const shifted = div(
+        { mantissa: x.mantissa - 1n, exponent: x.exponent },
+        { mantissa: x.mantissa + 1n, exponent: x.exponent },
+        p
+    );
 
     let term = shifted;
     let result = term;
     let n = 1n;
 
-    let count = 0;
-    while (term.mantissa !== 0n) {
-        ++count;
-//        if(count > 100)
-//          throw 'too long';
+    const maxIterations = 1000;
+    for (let i = 0; i < maxIterations; i++) {
         term = mul(term, mul(shifted, shifted));
         n += 2n;
-        const temp = {mantissa: n, exponent: 0n};
-//        console.error('ymmot1', {term, temp, p});
+        const temp = { mantissa: n, exponent: 0n };
         const next = div(term, temp, p);
+
+        // Break if next term is negligible
         if (next.mantissa === 0n) break;
+
         result = add(result, next);
     }
 
-    return mul(result, {mantissa: 2n, exponent: 0n});
+    return mul(result, { mantissa: 2n, exponent: 0n });
 }
