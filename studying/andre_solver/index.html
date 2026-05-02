@@ -1,0 +1,365 @@
+<script>
+
+// Note: most of this code is AI-generated.
+
+/*
+Notes to self: Looking at the value function, it's quite complicated, but it appears to be maximizing a quantity using adjustable levers Consumption and Saving and LaborHours, where the maximized quantity includes the present period utility according to the u function plus the discounted expectation of the value of all future periods combined (base case will be when j is J+1 and agent is experiencing death). Constraints include positivity of Consumption, nonnegativity of Saving, and LaborHours from zero to one inclusive. Constraints also include defining the number of children as either zero or ((j <= 6) ? 0 : (7 <= j && j <= 9) ? 1 : (10 <= j && j <= 12) ? 2 : (13 <= j && j <= 24) ? 3 : (25 <= j && j <= 27) ? 2 : (28 <= j && j <= 30) ? 1 : 0). Constraints also include defining how human capital changes between periods (I have yet to look this up precisely). Constraints also include defining paycheck as ambient wage level times individual productivity factor times individual ability factor times human capital times effective labor hours (raw LaborHours minus constant l bar). Finally, constraints include defining your next period assets as the summation of your previous assets plus interest plus paycheck reduced by payroll tax plus EITC plus SNAP plus TANF minus consumption minus consumption taxes minus childcare costs (either zero or eta if k=1 and currently laboring and current age is 27 through 35 inclusive) minus income tax.
+*/
+
+
+const main_scope = async() => {
+
+
+// Parameters:
+const J = 80;           // Death age (80 means 100 years old)
+const JR = 45;          // Retirement age (45 means 65 years old)
+const p_k = 0.3;        // The probability that an agent will decide to have kids.
+const AVERAGE_ASSETS = 10000;   // For calculating initial assets. Let's just use an arbitrary number.
+const beta = 0.996;     // Discount factor ("impatience")
+const phi = 58.36;      // Disutility of labor
+const gamma = 0.6;      // Additional disutility of labor
+const r = 0.04;         // Interest rate
+const w = 50000.0;      // Wage market rate. Let's just use an arbitrary number.
+const l_bar = 0.08;     // Fixed time cost of labor
+const b_SS = 0.36;      // Social Security income replacement percentage
+const delta_h = 0.015;  // Human capital decay when not working
+const nu_1 = 0.0455;    // Human capital increase when working
+const nu_2 = -0.001;    // Additional human capital increase when working
+const rho = 0.9766;     // Persistence of productivity z
+const epsilon_stddev = Math.sqrt(.0243);        // Variance of increment of productivity z
+const grid_z = [-4, -1, -.25, 0, .25, 1, 4, 32.15]  // Just guessing, because the paper doesn't specify.
+const pi_z = (() => {
+  const matrix = Array(8).fill(0).map(() => (Array(8).fill(0)));
+
+  return matrix;
+})();
+const eta = 9600;       // Annual childcare costs
+
+// Agent-specific variables:
+const theta = ((Math.random() < 0.5) ? .009 : -.009);   // Ability
+const k = ((Math.random() < p_k) ? 1 : 0);      // This agent's decision to have kids or not.
+let assets = ((theta < 0) ? 0 : 0.0133 * AVERAGE_ASSETS);
+let period = 1;
+let humanCapital = 1.0;
+let productivity = 0.0;
+let cumulative_utility = 0;
+
+function gaussianRandom(mean = 0, stdev = 1) {
+  let u1, u2, r;
+  do {
+    u1 = 2 * Math.random() - 1; // Range: -1 to 1
+    u2 = 2 * Math.random() - 1; // Range: -1 to 1
+    r = u1 * u1 + u2 * u2;
+  } while (r === 0 || r >= 1); // Reject points outside the unit circle
+  const c = Math.sqrt(-2 * Math.log(r) / r);
+  return u1 * c * stdev + mean;
+}
+
+const get_nearest_grid_point = ({precise_value, grid}) => {
+  let nearest = grid[0];
+  for(let i=1; i<grid.length; ++i)
+    if(Math.abs(grid[i] - precise_value) < Math.abs(nearest - precise_value))
+      nearest = grid[i];
+  return nearest;
+};
+
+const compute_new_productivity = (old_productivity) => {
+  const precise_value = rho * old_productivity + gaussianRandom(0, epsilon_stddev);
+  const discretized_value = get_nearest_grid_point({precise_value, grid: grid_z});
+  return discretized_value;
+};
+
+const basic_controller = () => {
+  return {c: 1, l: .33};
+};
+
+const calculations = () => {
+  const {c, l} = basic_controller();
+
+  const isRetired = (period >= JR);
+
+  if(isRetired && l > 0)
+    throw 'Error: You are retired. You can no longer work.';
+
+  const effectiveL = getEffectiveLabor(l);
+
+  const income = (() => {
+    if(isRetired) {
+      const social_security = b_SS * AE(period);
+      return social_security;
+    } else {
+      const earnings = w * Math.exp(productivity + theta) * humanCapital * effectiveL;
+      return earnings;
+    }
+  })();
+
+  const interest = r * assets;
+  const childcare_costs = compute_childcare_costs({j: period, k});
+
+  const resources = assets + interest + income - childcare_costs;
+
+  const implied_new_assets = resources - c;
+  const aPrime = implied_new_assets;
+  const impliedConsumption = resources - aPrime;
+
+  if(Math.abs(impliedConsumption - c) > 0.005)
+    throw 'Assertion failed';
+
+  const u = utility(c, l);
+
+  const new_human_capital = (() => {
+    if(l > l_bar) {
+      return humanCapital * Math.exp(nu_1 - nu_2 * period);
+    } else {
+      return humanCapital * Math.exp(-delta_h);
+    }
+  })();
+
+  const new_productivity = compute_new_productivity(productivity);
+
+  return {c, l, aPrime, income, u, new_human_capital, new_productivity, interest, childcare_costs};
+};
+
+const advancePeriod = () => {
+  const outputDiv = document.getElementById('output');
+  try {
+    const result = calculations();
+    const {c, l, aPrime, income, u, new_human_capital, new_productivity, interest, childcare_costs} = result;
+
+    // Update state:
+    assets = aPrime;
+    humanCapital = new_human_capital;
+    cumulative_utility += u;
+    productivity = new_productivity;
+    period += 1;
+
+    // Update UI:
+    outputDiv.innerHTML += `
+        <strong>Period ${period - 1}:</strong><br><br>
+        • Consumption: <b>${result.c.toFixed(2)}</b><br>
+        • Labor: <b>${result.l.toFixed(3)}</b> (effective labor = ${(getEffectiveLabor(l)).toFixed(3)})<br>
+        • Assets carried to next period: <b>${result.aPrime.toFixed(2)}</b><br><br>
+
+        • Interest income: <b>${interest.toFixed(2)}</b><br>
+        • Other income: <b>${result.income.toFixed(2)}</b><br>
+        • Childcare costs = <b>${childcare_costs.toFixed(2)}</b><br>
+        • Utility this period = <b>${result.u.toFixed(3)}</b><br>
+        • New human capital h = <b>${result.new_human_capital.toFixed(3)}</b><br>
+        • New productivity z = <b>${new_productivity.toFixed(3)}</b><br><br>
+
+        <strong>Cumulative utility:</strong> ${cumulative_utility.toFixed(3)}<br>
+        ─────────────────────────────<br>
+    `;
+
+    // Special UI update at end of life:
+    if(period > J) {
+      outputDiv.innerHTML += "<strong style='color:green'>Life ended at period 80.</strong><br>";
+      document.querySelector('button').disabled = true;
+    }
+  } catch(e) {
+    outputDiv.innerHTML += `\
+      <div style="color:red">Error: ${e}</div>
+    `;
+    throw e;
+  }
+  setTimeout(() => {document.body.scrollTop = document.body.scrollHeight;}, 0);
+};
+
+const AE = (period) => {  // AE stands for Average Earnings.
+  return w;  // Is this definition correct? Probably not.
+};
+
+const number_of_children = ({j, k}) => {
+  if(k === 0)
+    return 0;
+  if(j <= 6)
+    return 0;
+  if(j <= 9)
+    return 1;
+  if(j <= 12)
+    return 2;
+  if(j <= 24)
+    return 3;
+  if(j <= 27)
+    return 2;
+  if(j <= 30)
+    return 1;
+  return 0;
+};
+
+const compute_childcare_costs = ({j, k}) => {
+  if(k === 0)
+    return 0;
+  if(j >= 7  &&  j <= 15)  // During these years, the agent has exactly one child of age 0 or 1 or 2.
+    return eta;
+  return 0;
+};
+
+function utility(c, l) {
+  if (c <= 0) return -Infinity;
+  const consumptionUtility = Math.log(c);
+  const laborDisutility = phi * Math.pow(l, 1 + 1/gamma) / (1 + 1/gamma);
+  return consumptionUtility - laborDisutility;
+}
+
+function getEffectiveLabor(l) {
+  return Math.max(0, l - l_bar);
+}
+
+const initialize_ui = () => {
+  // Create container
+  const container = document.createElement('div');
+  container.className = 'container';
+
+  // Title
+  const h1 = document.createElement('h1');
+  h1.textContent = 'Luduvice Model - Solver';
+  container.appendChild(h1);
+
+  container.appendChild(document.createTextNode('Note: government benefits and taxes are not yet implemented in this version of the simulator.'));
+
+  const outputDiv = document.createElement('div');
+  outputDiv.id = 'output';
+  container.appendChild(outputDiv);
+
+  // Append to body
+  document.body.style.fontFamily = 'Arial, sans-serif';
+  document.body.style.margin = '20px';
+  document.body.appendChild(container);
+
+  // Add styles
+  const style = document.createElement('style');
+  style.textContent = `
+    .container { max-width: 700px; }
+    input { width: 120px; padding: 6px; margin: 5px; }
+    button { padding: 10px 16px; font-size: 16px; }
+    #output { margin-top: 20px; font-family: monospace; line-height: 1.5; }
+  `;
+  document.head.appendChild(style);
+
+  document.getElementById('output').innerHTML = `\
+    Simulation started.<br>
+    • ability theta = ${theta}<br>
+    • human capital h = ${humanCapital}<br>
+    • productivity z = ${productivity}<br>
+    • fertility k = ${k}<br>
+    • assets = ${assets}<br>
+    Choose your actions and click 'Advance to Next Period'.<br>
+
+    <pre>
+    // Listing of formulas:
+    theta = ((Math.random() < 0.5) ? .009 : -.009);  // This agent's ability level.
+    k = ((Math.random() < p_k) ? 1 : 0);             // This agent's decision to have kids or not.
+    is_retired = (j >= JR);
+    effective_labor = Math.max(0, l - l_bar);
+    potential_earnings = w * Math.exp(current_z + theta) * current_h * effective_labor;
+    potential_social_security = b_SS * AverageEarnings;
+    other_income = ((is_retired) ? potential_earnings : potential_social_security);
+    interest = r * current_assets;
+    childcare_costs = ((k === 0) ? 0 : (j >= 7 && j < 15) ? eta : 0);
+    new_assets_should_equal = current_assets + interest + other_income - childcare_costs - c;
+    immediate_utility = Math.log(c) - phi * Math.pow(l, 1 + 1/gamma) / (1 + 1/gamma);
+    increased_h = current_h * Math.exp(nu_1 - nu_2 * j);
+    decreased_h = current_h * Math.exp(-delta_h);
+    new_h = ((l > l_bar) ? increased_h : decreased_h);
+    new_z = rho * current_z + gaussianRandom(0, epsilon_stddev);
+
+    // Listing of constants:
+    const J = 80;           // Death age (80 means 100 years old)
+    const JR = 45;          // Retirement age (45 means 65 years old)
+    const p_k = 0.3;        // The probability that an agent will decide to have kids.
+    const AVERAGE_ASSETS = 10000;   // For calculating initial assets. Let's just use an arbitrary number.
+    const beta = 0.996;     // Discount factor ("impatience")
+    const phi = 58.36;      // Disutility of labor
+    const gamma = 0.6;      // Additional disutility of labor
+    const r = 0.04;         // Interest rate
+    const w = 50000.0;      // Wage market rate. Let's just use an arbitrary number.
+    const l_bar = 0.08;     // Fixed time cost of labor
+    const b_SS = 0.36;      // Social Security income replacement percentage
+    const delta_h = 0.015;  // Human capital decay when not working
+    const nu_1 = 0.0455;    // Human capital increase when working
+    const nu_2 = -0.001;    // Additional human capital increase when working
+    const rho = 0.9766;     // Persistence of productivity z
+    const epsilon_stddev = Math.sqrt(.0243);    // Variance of increment of productivity z
+    const eta = 9600;       // Annual childcare costs
+    const AverageEarnings = w;  // This definition is probably incorrect.</pre>
+  `;
+};
+
+initialize_ui();
+advancePeriod();
+advancePeriod();
+advancePeriod();
+
+const create_nonlinear_grid = ({N_a, g_a, a_bar = 1200}) => {
+  return Array.from({length: N_a}, (_, i) => {
+    const a_hat = a_bar * ((1+g_a)**i - 1) / ((1+g_a)**(N_a-1) - 1);
+    return a_hat;// ** (i+1);
+  });
+};
+
+const temp = (r, w) => {
+  const grid_a = create_nonlinear_grid({N_a: 100, g_a: 0.14});
+  const grid_a_prime = create_nonlinear_grid({N_a: 250, g_a: 0.05});
+  const grid_h = create_nonlinear_grid({
+    N_a: 20,
+    g_a: 0.05,  // Just guessing, because the paper doesn't specify.
+    a_bar: 5,   // Just guessing, because the paper doesn't specify.
+  });
+  const grid_j = Array(80).fill(0).map((_, i) => (i + 1));
+  console.log({grid_a, grid_a_prime, grid_h, grid_j, grid_z});
+
+//    const V = {};
+//    const policyA = {};
+//
+//    // Terminal condition (last period)
+//    for (let a = 0; a < nA; a++) {
+//        V[J-1][a] = u(A_grid[a] * (1 + r));   // consume everything
+//    }
+//
+//    // Backward induction from J-2 down to 0
+//    for (let j = J-2; j >= 0; j--) {
+//        const isRetired = (j + 1 >= JR);
+//
+//        for (let a_idx = 0; a_idx < nA; a_idx++) {
+//            let maxVal = -Infinity;
+//            let bestAprime = 0;
+//
+//            const currentA = A_grid[a_idx];
+//
+//            for (let ap_idx = 0; ap_idx < nA; ap_idx++) {
+//                const aPrime = A_grid[ap_idx];
+//
+//                const l = isRetired ? 0 : 0.75;                 // fixed labor for now
+//                const earnings = isRetired ? b_SS * w : w * Math.exp(0) * l; // simplified
+//                const transfers = isRetired ? 0 : UBI;
+//
+//                const resources = (1 + r) * currentA + earnings + transfers;
+//                const c = resources - aPrime;
+//
+//                if (c <= 0) continue;
+//
+//                const continuation = V[j + 1][ap_idx];           // interpolation would go here in full version
+//                const totalValue = u(c) + beta * continuation;
+//
+//                if (totalValue > maxVal) {
+//                    maxVal = totalValue;
+//                    bestAprime = aPrime;
+//                }
+//            }
+//
+//            V[j][a_idx] = maxVal;
+//            policyA[j][a_idx] = bestAprime;
+//        }
+//    }
+//
+//    return { V, policyA };
+};
+
+temp();
+
+
+};
+
+window.onload = main_scope;
+</script>

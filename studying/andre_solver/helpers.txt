@@ -1,0 +1,62 @@
+function div(a, b, precision) {
+    if (b.mantissa === 0n) throw new Error("Division by zero");
+    const p1 = BigInt((a.mantissa+'').length - 1);
+    const p2 = BigInt((b.mantissa+'').length - 1);
+    const e = (precision + p2 - p1);
+    const scale = 10n ** e;
+    const scaledNumerator = a.mantissa * scale;
+    const mantissa = scaledNumerator / b.mantissa;
+    const exponent = a.exponent - b.exponent - e;
+    return { mantissa, exponent };
+}
+
+function mul(a, b) {
+    return {
+        mantissa: a.mantissa * b.mantissa,
+        exponent: a.exponent + b.exponent
+    };
+}
+
+function add(a, b) {
+    if (a.exponent > b.exponent) {
+        const shift = a.exponent - b.exponent;
+        const shiftedMantissa = a.mantissa * (10n ** BigInt(shift));
+        return {
+            mantissa: shiftedMantissa + b.mantissa,
+            exponent: b.exponent
+        };
+    } else {
+        const shift = b.exponent - a.exponent;
+        const shiftedMantissa = b.mantissa * (10n ** BigInt(shift));
+        return {
+            mantissa: shiftedMantissa + a.mantissa,
+            exponent: a.exponent
+        };
+    }
+}
+
+function exp(x, precision) {
+    const scale = 10n ** (BigInt(precision) + 3n);
+    let term = scale;
+    let result = scale;
+    let n = 1n;
+
+    const expt = precision + 3n + x.exponent;
+
+    // Scale x to integer: x_scaled = x.mantissa * 10^(precision + x.exponent)
+    const xScaled = (() => {
+      if(expt >= 0n)
+        return x.mantissa * (10n ** expt);
+      else
+        return x.mantissa / (10n ** -expt);
+    })();
+
+    while (term > 0n) {
+        term = (term * xScaled) / (n * scale);
+        if (term === 0n) break;
+        result += term;
+        n += 1n;
+    }
+
+    return { mantissa: result / 1000n, exponent: -precision };
+}
