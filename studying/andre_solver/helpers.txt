@@ -42,6 +42,7 @@ function add(a, b) {
 }
 
 function exp(x, precision) {
+//    console.log('exp()', {x, precision});
     const scale = 10n ** (BigInt(precision) + 3n);
     let term = scale;
     let result = scale;
@@ -72,18 +73,18 @@ function negate({mantissa, exponent}) {
 }
 
 function ln(x, precision) {
+//  console.log('ln()', {x, precision});
   // From https://en.wikipedia.org/wiki/Natural_logarithm#High_precision
   const internal_precision = 2n * precision;
   let y = {mantissa: 1n, exponent: 0n};
   while(true) {
     const old = y;
-    y = add(y, mul({mantissa: 2n, exponent: 0n}, div(
-      add(x, negate(exp(y, precision))),
-      add(x, exp(y, internal_precision)),
-      internal_precision,
-    )));
+    const temp_1 = exp(y, internal_precision);
+    y = add(y, mul({mantissa: 2n, exponent: 0n}, div(add(x, negate(temp_1)), add(x, temp_1), internal_precision)));
     const diff = add(y, negate(old));
-    if((diff.mantissa / (10n ** (precision + 3n))) === 0n)
+    const tempp = (diff.mantissa / (10n ** (precision + 3n)));
+//    console.log({tempp});
+    if(tempp === 0n)
       break;
   }
   return y;
@@ -93,37 +94,89 @@ function pow(x, y, precision) {
   return exp(mul(y, ln(x, precision)), precision);
 }
 
+function arctan(x, precision) {
+    const maxIterations = 100n;
+    let iterations = 0n;
 
+    const expt = BigInt(precision) + 3n;
+    const scale = 10n ** expt;
+    const xScaled = x; // x is the denominator (5 or 239)
+    const xSquared = xScaled * xScaled;
+    let power = scale / xScaled; // This is (1/x) scaled
+    let sum = power;
+    let divisor = 1n;
 
+    while (true) {
+        if (iterations >= maxIterations) {
+            console.log(`arctan: Exceeded ${maxIterations} iterations. x=${xScaled}, power=${power}, sum=${sum}`);
+            throw 'bad!';
+            break;
+        }
 
+        power = -power / xSquared; // Calculate the next power of (1/x)
+        divisor += 2n;
+        const delta = power / divisor; // This is the actual amount to add
+        if (delta === 0n) break; // Stop when the delta is zero
 
-    const p = BigInt(precision) + 3n;
-    const scale = 10n ** p;
-    const one = scale;
-
-    // Reduce x to (x-1)/(x+1) for artanh series
-    const shifted = div(
-        { mantissa: x.mantissa - 1n, exponent: x.exponent },
-        { mantissa: x.mantissa + 1n, exponent: x.exponent },
-        p
-    );
-
-    let term = shifted;
-    let result = term;
-    let n = 1n;
-
-    const maxIterations = 1000;
-    for (let i = 0; i < maxIterations; i++) {
-        term = mul(term, mul(shifted, shifted));
-        n += 2n;
-        const temp = { mantissa: n, exponent: 0n };
-        const next = div(term, temp, p);
-
-        // Break if next term is negligible
-        if (next.mantissa === 0n) break;
-
-        result = add(result, next);
+        sum += delta;
+        iterations += 1n;
     }
 
-    return mul(result, { mantissa: 2n, exponent: 0n });
+    return { mantissa: sum, exponent: -precision - 3n };
 }
+
+function pi_approx(precision) {
+    const arctan1_5 = arctan(5n, precision);
+    const arctan1_239 = arctan(239n, precision);
+
+    // pi = 16*arctan(1/5) - 4*arctan(1/239)
+    let pi = 16n * arctan1_5.mantissa - 4n * arctan1_239.mantissa;
+    return { mantissa: pi, exponent: -precision-3n };
+}   
+
+function gaussian_cdf(x, precision) {
+    const one = 10n ** (BigInt(precision) + 3n);
+    const sqrt2 = pow({mantissa: 2n, exponent: 0n}, {mantissa: 5n, exponent: -1n}, precision + 3n).mantissa;
+
+    const x_div_sqrt2 = { 
+        mantissa: (x.mantissa * one) / sqrt2, 
+        exponent: x.exponent - precision - 3n 
+    };
+
+    const erf_val = erf(x_div_sqrt2, precision);
+    const cdf = (one + erf_val.mantissa) / 2n;
+
+    return { mantissa: cdf / 1000n, exponent: -precision };
+}   
+
+function erf(x, precision) {
+    const expt = BigInt(precision) + 3n - x.exponent;
+    const scale = 10n ** (BigInt(precision) + 3n);
+    const xScaled = x.mantissa * (10n ** expt);
+    const x2 = (xScaled * xScaled) / scale;
+
+    let term = xScaled;
+    let sum = term;
+    let n = 1n;
+
+    while (term !== 0n) {
+        term = -term * x2;
+        term = term / ((2n * n + 1n) * scale);
+        
+        if (term === 0n) break;
+        sum += term;
+        n += 1n;
+    }
+
+    // Multiply by 2/sqrt(pi) using the series result
+    const two_over_sqrt_pi = { mantissa: 2n, exponent: 0n }; // Approximate
+    const pi = pi_approx(precision);
+    const sqrt_pi = pow(pi, { mantissa: 5n, exponent: -1n }, precision);
+    const multiplier = div(two_over_sqrt_pi, sqrt_pi, precision);
+
+    return mul({mantissa: sum, exponent: -precision - 3n}, multiplier);
+
+//    sum = (sum * multiplier.mantissa) / (10n ** multiplier.exponent);
+//
+//    return { mantissa: sum, exponent: -precision - 3n };
+}   
