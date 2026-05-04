@@ -1,5 +1,5 @@
 function div(a, b, precision) {
-//    console.error({a,b,precision});
+//    console.log('div',{a,b,precision});
     if (b.mantissa === 0n) throw new Error("Division by zero");
     const p1 = BigInt((a.mantissa+'').length);
     const p2 = BigInt((b.mantissa+'').length);
@@ -24,6 +24,7 @@ function mul(a, b) {
 }
 
 function add(a, b) {
+//console.log('add',{a,b});
     if (a.exponent > b.exponent) {
         const shift = a.exponent - b.exponent;
         const shiftedMantissa = a.mantissa * (10n ** BigInt(shift));
@@ -39,6 +40,10 @@ function add(a, b) {
             exponent: a.exponent
         };
     }
+}
+
+function sub(a, b) {
+  return add(a, negate(b));
 }
 
 function exp(x, precision) {
@@ -91,6 +96,9 @@ function ln(x, precision) {
 }
 
 function pow(x, y, precision) {
+//  console.log('pow', {x,y,precision});
+  if(x.mantissa === 0n && y.mantissa !== 0n)
+    return {mantissa: 0n, exponent: 0n};
   return exp(mul(y, ln(x, precision)), precision);
 }
 
@@ -132,22 +140,22 @@ function pi_approx(precision) {
     // pi = 16*arctan(1/5) - 4*arctan(1/239)
     let pi = 16n * arctan1_5.mantissa - 4n * arctan1_239.mantissa;
     return { mantissa: pi, exponent: -precision-3n };
-}   
+}
 
 function gaussian_cdf(x, precision) {
     const one = 10n ** (BigInt(precision) + 3n);
     const sqrt2 = pow({mantissa: 2n, exponent: 0n}, {mantissa: 5n, exponent: -1n}, precision + 3n).mantissa;
 
-    const x_div_sqrt2 = { 
-        mantissa: (x.mantissa * one) / sqrt2, 
-        exponent: x.exponent - precision - 3n 
+    const x_div_sqrt2 = {
+        mantissa: (x.mantissa * one) / sqrt2,
+        exponent: x.exponent - precision - 3n
     };
 
     const erf_val = erf(x_div_sqrt2, precision);
     const cdf = (one + erf_val.mantissa) / 2n;
 
     return { mantissa: cdf / 1000n, exponent: -precision };
-}   
+}
 
 function erf(x, precision) {
     const expt = BigInt(precision) + 3n - x.exponent;
@@ -162,7 +170,7 @@ function erf(x, precision) {
     while (term !== 0n) {
         term = -term * x2;
         term = term / ((2n * n + 1n) * scale);
-        
+
         if (term === 0n) break;
         sum += term;
         n += 1n;
@@ -179,7 +187,31 @@ function erf(x, precision) {
 //    sum = (sum * multiplier.mantissa) / (10n ** multiplier.exponent);
 //
 //    return { mantissa: sum, exponent: -precision - 3n };
-}   
+}
+
+function gaussian_pdf({argument, mean, stddev, precision}) {
+  const temp_precision = precision + 3n;
+  const coefficient = div(
+    {mantissa: 1n, exponent: 0n},
+    mul(stddev, pow(mul({mantissa: 2n, exponent: 0n}, pi_approx(temp_precision)), {mantissa: 5n, exponent: -1n}, temp_precision)),
+    temp_precision,
+  );
+//  console.log('gaussian_pdf', {argument, mean, stddev, precision, temp_precision, coefficient});
+  const exponent = negate(div(
+    pow(sub(argument, mean), {mantissa: 2n, exponent: 0n}, temp_precision),
+    mul({mantissa: 2n, exponent: 0n}, pow(stddev, {mantissa: 2n, exponent: 0n}, temp_precision)),
+    temp_precision,
+  ));
+  return mul(coefficient, exp(exponent, temp_precision));
+}
+
+const one = {mantissa: 1n, exponent: 0n};
+const zero = {mantissa: 0n, exponent: 0n};
+
+// Example usage:
+// mean = 0, variance = 1 (Standard Normal Distribution)
+//console.log(gaussian_pdf({argument: zero, mean: zero, stddev: one, precision: 6n})); // Output: ~0.3989
+//console.log(gaussian_pdf({argument: one, mean: zero, stddev: one, precision: 6n})); // Output: ~0.2420
 
 function erf(x, precision) {
     if (x === null || x === undefined || typeof x.mantissa !== 'bigint' || typeof x.exponent !== 'bigint') {
