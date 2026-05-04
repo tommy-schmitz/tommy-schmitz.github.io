@@ -79,6 +79,10 @@ function negate({mantissa, exponent}) {
 
 function ln(x, precision) {
 //  console.log('ln()', {x, precision});
+
+  if(x.mantissa <= 0n)
+    throw new Error('attempting to take log of non-positive');
+
   // From https://en.wikipedia.org/wiki/Natural_logarithm#High_precision
   const internal_precision = 2n * precision;
   let y = {mantissa: 1n, exponent: 0n};
@@ -99,11 +103,13 @@ function pow(x, y, precision) {
 //  console.log('pow', {x,y,precision});
   if(x.mantissa === 0n && y.mantissa !== 0n)
     return {mantissa: 0n, exponent: 0n};
+  if(x.mantissa < 0n)
+    throw new Error('for exponentiating negative numbers, use mul() instead, for now');
   return exp(mul(y, ln(x, precision)), precision);
 }
 
 function arctan(x, precision) {
-    const maxIterations = 100n;
+    const maxIterations = 1000n;
     let iterations = 0n;
 
     const expt = BigInt(precision) + 3n;
@@ -175,6 +181,7 @@ function pi_approx(precision) {
 //}
 
 function gaussian_pdf({argument, mean, stddev, precision}) {
+//  console.log('gaussian_pdf', {argument, mean, stddev, precision});
   const temp_precision = precision + 3n;
   const coefficient = div(
     {mantissa: 1n, exponent: 0n},
@@ -182,11 +189,8 @@ function gaussian_pdf({argument, mean, stddev, precision}) {
     temp_precision,
   );
 //  console.log('gaussian_pdf', {argument, mean, stddev, precision, temp_precision, coefficient});
-  const exponent = negate(div(
-    pow(sub(argument, mean), {mantissa: 2n, exponent: 0n}, temp_precision),
-    mul({mantissa: 2n, exponent: 0n}, pow(stddev, {mantissa: 2n, exponent: 0n}, temp_precision)),
-    temp_precision,
-  ));
+  const to_be_squared = sub(argument, mean);
+  const exponent = negate(div(mul(to_be_squared, to_be_squared), mul({mantissa: 2n, exponent: 0n}, mul(stddev, stddev)), temp_precision));
   return mul(coefficient, exp(exponent, temp_precision));
 }
 
@@ -278,11 +282,11 @@ function lessThan(a, b) {
     if (expDiff > 0n) {
         // a has larger exponent, so a is potentially larger
         // scale b up to match a's exponent
-        bComp = bComp * (10n ** BigInt(expDiff));
+        aComp = aComp * (10n ** BigInt(expDiff));
     } else if (expDiff < 0n) {
         // b has larger exponent, so b is potentially larger
         // scale a up to match b's exponent
-        aComp = aComp * (10n ** BigInt(-expDiff));
+        bComp = bComp * (10n ** BigInt(-expDiff));
     }
     // If exponents are equal, just compare mantissas
 
@@ -306,23 +310,36 @@ function adaptiveRiemannIntegration(func, a, b, precision) {
         let leftSum = {mantissa: 0n, exponent: 0n};
         let rightSum = {mantissa: 0n, exponent: 0n};
 
-        for (let j = 0n; j < n; j++) {
-            const xLeft = add(a, mul(j, dx));
-            const xRight = add(a, mul(add(j, 1n), dx));
-            leftSum = add(leftSum, mul(func(xLeft, precision), dx));
-            rightSum = add(rightSum, mul(func(xRight, precision), dx));
+        for (let j = 0n; j < n.mantissa; j++) {
+            const j_ = {mantissa: j, exponent: 0n};
+            const xLeft = add(a, mul(j_, dx));
+            const xRight = add(a, mul(add(j_, {mantissa: 1n, exponent: 0n}), dx));
+//            console.log({xLeft, xRight});
+            leftSum = add(leftSum, mul(func(xLeft, precision+3n), dx));
+            rightSum = add(rightSum, mul(func(xRight, precision+3n), dx));
         }
 
-        if (lessThan(sub(rightSum, leftSum), epsilon)) {
-            //return {
-            //    integral: div(add(leftSum, rightSum), {mantissa: 2n, exponent: 0n}, precision),
-            //    n: n,
-            //    iterations: i + 1
-            //};
-            return div(add(leftSum, rightSum), {mantissa: 2n, exponent: 0n}, precision+3n);
+        const diff = sub(rightSum, leftSum);
+        console.log({leftSum, rightSum, diff, epsilon});
+
+        if(lessThan(rightSum, leftSum))
+          throw 'interesting';
+
+        if (lessThan(diff, epsilon)) {
+            const result = div(add(leftSum, rightSum), {mantissa: 2n, exponent: 0n}, precision+3n);
+            console.log('riemann', {
+                func, a, b, precision,
+                result: result,
+                rightSum, leftSum,
+                epsilon,
+                n: n,
+                dx,
+                iterations: i + 1,
+            });
+            return result;
         }
 
-        n.mantissa *= 2n;  // Double the number of subintervals
+        n = {...n, mantissa: n.mantissa * 2n};  // Double the number of subintervals
     }
 
     throw new Error(`Failed to converge within ${maxIterations} iterations.`);
@@ -343,7 +360,10 @@ function adaptiveRiemannIntegration(func, a, b, precision) {
 //    return { mantissa: cdf / 1000n, exponent: -precision };
 //}
 
-function gaussian_cdf(arg_1, mean, stddev, precision) {
-  const helper = (arg_2, precision_2) => (gaussian_pdf(arg_2, mean, stddev, precision_2));
-  return add(adaptiveRiemannIntegration(helper, {mantissa: 0n, exponent: 0n}, arg_1, precision), {mantissa: 5n, exponent: -1n});
+function gaussian_cdf({argument: arg_1, mean, stddev, precision}) {
+  const helper = (arg_2, precision_2) => (gaussian_pdf({argument: arg_2, mean, stddev, precision: precision_2}));
+  if(arg_1.mantissa < 0n)
+    return add(adaptiveRiemannIntegration(helper, {mantissa: 0n, exponent: 0n}, arg_1, precision), {mantissa: 5n, exponent: -1n});
+  else
+    return add(negate(adaptiveRiemannIntegration(helper, {mantissa: 0n, exponent: 0n}, negate(arg_1), precision)), {mantissa: 5n, exponent: -1n});
 }
