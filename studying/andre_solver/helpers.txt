@@ -180,3 +180,55 @@ function erf(x, precision) {
 //
 //    return { mantissa: sum, exponent: -precision - 3n };
 }   
+
+function erf(x, precision) {
+    if (x === null || x === undefined || typeof x.mantissa !== 'bigint' || typeof x.exponent !== 'bigint') {
+        throw new Error("Invalid x: expected {mantissa: BigInt, exponent: BigInt}");
+    }
+
+    const PREC = precision;
+    const GUARD = 3n;                      // extra guard digits
+    const SCALE_EXP = PREC + GUARD;
+    const SCALE = 10n ** SCALE_EXP;
+
+    // xScaled ≈ x * SCALE
+    const xScaled = x.mantissa * (10n ** (SCALE_EXP - x.exponent));
+
+    // x² (scaled)
+    const x2 = (xScaled * xScaled) / SCALE;
+
+    // Taylor series sum: Σ (-1)^n * x^(2n+1) / (n! * (2n+1))
+    let term = xScaled;
+    let sum = term;
+    let n = 1n;
+
+    // No early exit based on iteration count — only when term becomes zero
+    // Safety limit only for throwing (as requested)
+    const MAX_ITER = 10000n;
+
+    while (true) {
+        if (n > MAX_ITER) {
+            throw new Error(`erf: iteration limit exceeded (${MAX_ITER}) for precision ${PREC}`);
+        }
+
+        // term_{n} = -term_{n-1} * x² / (n * (2n + 1))
+        term = -term * x2;
+        term = term / (n * (2n + 1n));
+
+        if (term === 0n) break;
+
+        sum += term;
+        n += 1n;
+    }
+
+    // 2 / √π
+    const two = { mantissa: 2n, exponent: 0n };
+    const pi = pi_approx(PREC + GUARD);   // assume this accepts number
+    const sqrtPi = pow(pi, { mantissa: 5n, exponent: -1n }, PREC + GUARD);
+    const twoOverSqrtPi = div(two, sqrtPi, PREC + GUARD);
+
+    // Final result: (2/√π) * sum * 10^(-SCALE_EXP)
+    const seriesResult = { mantissa: sum, exponent: -SCALE_EXP };
+
+    return mul(seriesResult, twoOverSqrtPi);
+}
