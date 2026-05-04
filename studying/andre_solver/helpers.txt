@@ -142,52 +142,37 @@ function pi_approx(precision) {
     return { mantissa: pi, exponent: -precision-3n };
 }
 
-function gaussian_cdf(x, precision) {
-    const one = 10n ** (BigInt(precision) + 3n);
-    const sqrt2 = pow({mantissa: 2n, exponent: 0n}, {mantissa: 5n, exponent: -1n}, precision + 3n).mantissa;
-
-    const x_div_sqrt2 = {
-        mantissa: (x.mantissa * one) / sqrt2,
-        exponent: x.exponent - precision - 3n
-    };
-
-    const erf_val = erf(x_div_sqrt2, precision);
-    const cdf = (one + erf_val.mantissa) / 2n;
-
-    return { mantissa: cdf / 1000n, exponent: -precision };
-}
-
-function erf(x, precision) {
-    const expt = BigInt(precision) + 3n - x.exponent;
-    const scale = 10n ** (BigInt(precision) + 3n);
-    const xScaled = x.mantissa * (10n ** expt);
-    const x2 = (xScaled * xScaled) / scale;
-
-    let term = xScaled;
-    let sum = term;
-    let n = 1n;
-
-    while (term !== 0n) {
-        term = -term * x2;
-        term = term / ((2n * n + 1n) * scale);
-
-        if (term === 0n) break;
-        sum += term;
-        n += 1n;
-    }
-
-    // Multiply by 2/sqrt(pi) using the series result
-    const two_over_sqrt_pi = { mantissa: 2n, exponent: 0n }; // Approximate
-    const pi = pi_approx(precision);
-    const sqrt_pi = pow(pi, { mantissa: 5n, exponent: -1n }, precision);
-    const multiplier = div(two_over_sqrt_pi, sqrt_pi, precision);
-
-    return mul({mantissa: sum, exponent: -precision - 3n}, multiplier);
-
-//    sum = (sum * multiplier.mantissa) / (10n ** multiplier.exponent);
+//function erf(x, precision) {
+//    const expt = BigInt(precision) + 3n - x.exponent;
+//    const scale = 10n ** (BigInt(precision) + 3n);
+//    const xScaled = x.mantissa * (10n ** expt);
+//    const x2 = (xScaled * xScaled) / scale;
 //
-//    return { mantissa: sum, exponent: -precision - 3n };
-}
+//    let term = xScaled;
+//    let sum = term;
+//    let n = 1n;
+//
+//    while (term !== 0n) {
+//        term = -term * x2;
+//        term = term / ((2n * n + 1n) * scale);
+//
+//        if (term === 0n) break;
+//        sum += term;
+//        n += 1n;
+//    }
+//
+//    // Multiply by 2/sqrt(pi) using the series result
+//    const two_over_sqrt_pi = { mantissa: 2n, exponent: 0n }; // Approximate
+//    const pi = pi_approx(precision);
+//    const sqrt_pi = pow(pi, { mantissa: 5n, exponent: -1n }, precision);
+//    const multiplier = div(two_over_sqrt_pi, sqrt_pi, precision);
+//
+//    return mul({mantissa: sum, exponent: -precision - 3n}, multiplier);
+//
+////    sum = (sum * multiplier.mantissa) / (10n ** multiplier.exponent);
+////
+////    return { mantissa: sum, exponent: -precision - 3n };
+//}
 
 function gaussian_pdf({argument, mean, stddev, precision}) {
   const temp_precision = precision + 3n;
@@ -263,4 +248,102 @@ function erf(x, precision) {
     const seriesResult = { mantissa: sum, exponent: -SCALE_EXP };
 
     return mul(seriesResult, twoOverSqrtPi);
+}
+
+function lessThan(a, b) {
+    // Handle zero cases explicitly if mantissa can be 0
+    if (a.mantissa === 0n) return b.mantissa > 0n;
+    if (b.mantissa === 0n) return a.mantissa < 0n;
+
+    // Normalize signs for easier comparison
+    const aIsNegative = a.mantissa < 0n;
+    const bIsNegative = b.mantissa < 0n;
+
+    // If signs differ, negative is always less than positive
+    if (aIsNegative !== bIsNegative) {
+        return aIsNegative;
+    }
+
+    // If signs are the same, compare absolute values
+    const aAbs = aIsNegative ? -a.mantissa : a.mantissa;
+    const bAbs = bIsNegative ? -b.mantissa : b.mantissa;
+
+    // Align exponents to compare mantissas directly
+    // We multiply the mantissa with the smaller exponent by 10^(diff)
+    // to bring it to the scale of the larger exponent
+    let aComp = aAbs;
+    let bComp = bAbs;
+    const expDiff = a.exponent - b.exponent;
+
+    if (expDiff > 0n) {
+        // a has larger exponent, so a is potentially larger
+        // scale b up to match a's exponent
+        bComp = bComp * (10n ** BigInt(expDiff));
+    } else if (expDiff < 0n) {
+        // b has larger exponent, so b is potentially larger
+        // scale a up to match b's exponent
+        aComp = aComp * (10n ** BigInt(-expDiff));
+    }
+    // If exponents are equal, just compare mantissas
+
+    if (aComp === bComp) {
+        return false; // They are equal, so a is not less than b
+    }
+
+    // If originally negative, the one with larger absolute value is actually smaller
+    return aIsNegative ? aComp > bComp : aComp < bComp;
+}
+
+function adaptiveRiemannIntegration(func, a, b, precision) {
+    const maxIterations = 20;
+
+    const epsilon = {mantissa: 5n, exponent: -precision-1n};
+
+    let n = {mantissa: 1n, exponent: 0n};
+
+    for (let i = 0; i < maxIterations; i++) {
+        const dx = div(sub(b, a), n, precision+3n); // (b - a) / n
+        let leftSum = {mantissa: 0n, exponent: 0n};
+        let rightSum = {mantissa: 0n, exponent: 0n};
+
+        for (let j = 0n; j < n; j++) {
+            const xLeft = add(a, mul(j, dx));
+            const xRight = add(a, mul(add(j, 1n), dx));
+            leftSum = add(leftSum, mul(func(xLeft, precision), dx));
+            rightSum = add(rightSum, mul(func(xRight, precision), dx));
+        }
+
+        if (lessThan(sub(rightSum, leftSum), epsilon)) {
+            //return {
+            //    integral: div(add(leftSum, rightSum), {mantissa: 2n, exponent: 0n}, precision),
+            //    n: n,
+            //    iterations: i + 1
+            //};
+            return div(add(leftSum, rightSum), {mantissa: 2n, exponent: 0n}, precision+3n);
+        }
+
+        n.mantissa *= 2n;  // Double the number of subintervals
+    }
+
+    throw new Error(`Failed to converge within ${maxIterations} iterations.`);
+}
+
+//function gaussian_cdf(x, precision) {
+//    const one = 10n ** (BigInt(precision) + 3n);
+//    const sqrt2 = pow({mantissa: 2n, exponent: 0n}, {mantissa: 5n, exponent: -1n}, precision + 3n).mantissa;
+//
+//    const x_div_sqrt2 = {
+//        mantissa: (x.mantissa * one) / sqrt2,
+//        exponent: x.exponent - precision - 3n
+//    };
+//
+//    const erf_val = erf(x_div_sqrt2, precision);
+//    const cdf = (one + erf_val.mantissa) / 2n;
+//
+//    return { mantissa: cdf / 1000n, exponent: -precision };
+//}
+
+function gaussian_cdf(arg_1, mean, stddev, precision) {
+  const helper = (arg_2, precision_2) => (gaussian_pdf(arg_2, mean, stddev, precision_2));
+  return add(adaptiveRiemannIntegration(helper, {mantissa: 0n, exponent: 0n}, arg_1, precision), {mantissa: 5n, exponent: -1n});
 }
