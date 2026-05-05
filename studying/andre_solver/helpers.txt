@@ -149,35 +149,8 @@ function pi_approx(precision) {
 }
 
 //function erf(x, precision) {
-//    const expt = BigInt(precision) + 3n - x.exponent;
-//    const scale = 10n ** (BigInt(precision) + 3n);
-//    const xScaled = x.mantissa * (10n ** expt);
-//    const x2 = (xScaled * xScaled) / scale;
-//
-//    let term = xScaled;
-//    let sum = term;
-//    let n = 1n;
-//
-//    while (term !== 0n) {
-//        term = -term * x2;
-//        term = term / ((2n * n + 1n) * scale);
-//
-//        if (term === 0n) break;
-//        sum += term;
-//        n += 1n;
-//    }
-//
-//    // Multiply by 2/sqrt(pi) using the series result
-//    const two_over_sqrt_pi = { mantissa: 2n, exponent: 0n }; // Approximate
-//    const pi = pi_approx(precision);
-//    const sqrt_pi = pow(pi, { mantissa: 5n, exponent: -1n }, precision);
-//    const multiplier = div(two_over_sqrt_pi, sqrt_pi, precision);
-//
-//    return mul({mantissa: sum, exponent: -precision - 3n}, multiplier);
-//
-////    sum = (sum * multiplier.mantissa) / (10n ** multiplier.exponent);
-////
-////    return { mantissa: sum, exponent: -precision - 3n };
+//  let product = {mantissa: 1n, exponent: 0n};
+//  while(
 //}
 
 function gaussian_pdf({argument, mean, stddev, precision}) {
@@ -322,8 +295,17 @@ function adaptiveRiemannIntegration(func, a, b, precision) {
         const diff = sub(rightSum, leftSum);
         console.log({leftSum, rightSum, diff, epsilon});
 
-        if(lessThan(rightSum, leftSum))
+        if(lessThan(rightSum, leftSum)) {
+          console.log('riemann', {
+              func, a, b, precision,
+              rightSum, leftSum,
+              epsilon,
+              n: n,
+              dx,
+              iterations: i + 1,
+          });
           throw 'interesting';
+        }
 
         if (lessThan(diff, epsilon)) {
             const result = div(add(leftSum, rightSum), {mantissa: 2n, exponent: 0n}, precision+3n);
@@ -362,8 +344,8 @@ function adaptiveRiemannIntegration(func, a, b, precision) {
 
 function gaussian_cdf({argument: arg_1, mean, stddev, precision}) {
   const helper = (arg_2, precision_2) => (gaussian_pdf({argument: arg_2, mean, stddev, precision: precision_2}));
-  if(arg_1.mantissa < 0n)
-    return add(adaptiveRiemannIntegration(helper, {mantissa: 0n, exponent: 0n}, arg_1, precision), {mantissa: 5n, exponent: -1n});
+  if(lessThan(arg_1, mean))
+    return add(adaptiveRiemannIntegration(helper, mean, arg_1, precision), {mantissa: 5n, exponent: -1n});
   else
-    return add(negate(adaptiveRiemannIntegration(helper, {mantissa: 0n, exponent: 0n}, negate(arg_1), precision)), {mantissa: 5n, exponent: -1n});
+    return add(adaptiveRiemannIntegration(helper, sub(add(mean,mean), arg_1), mean, precision), {mantissa: 5n, exponent: -1n});
 }
