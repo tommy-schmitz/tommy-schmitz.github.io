@@ -342,10 +342,65 @@ function adaptiveRiemannIntegration(func, a, b, precision) {
 //    return { mantissa: cdf / 1000n, exponent: -precision };
 //}
 
+function abs(x) {return {...x, mantissa: ((x.mantissa < 0n) ? -x.mantissa : x.mantissa)};}
+
+function adaptive_quadrature_gaussian({a, b, mean, stddev, precision, budget}) {
+  let final_multiplier = 1n;
+  if(lessThan(b, a))
+    [a,b,final_multiplier] = [b,a,-1n];
+  const sqrt_3 = pow({mantissa: 3n, exponent: 0n}, {mantissa: 5n, exponent: -1n}, precision+3n);
+  const relevants = [a, b];
+  const crits = [sub(mean, mul(sqrt_3, stddev)), mean, add(mean, mul(sqrt_3, stddev))];
+  for(const crit of crits)
+    if(lessThan(a, crit)  &&  lessThan(crit, b))
+      relevants.push(crit);
+  const variance = mul(stddev, stddev);
+  const second_derivative_magnitudes = relevants.map((x) => {
+    const diff = sub(x, mean);
+    const scalar = div(sub(mul(diff, diff), variance), mul(variance, variance), precision);
+    return abs(mul(scalar, gaussian_pdf({argument: x, mean, stddev, precision})));
+  });
+
+  let K = second_derivative_magnitudes[0];
+  for(const x of second_derivative_magnitudes.slice(1))
+    if(lessThan(K, x))
+      K = x;
+
+  const E = (() => {
+    const diff = sub(b, a);
+    const sq = mul(diff, diff);
+    const cube = mul(diff, sq);
+    return div(mul(K, cube), {mantissa: 12n, exponent: 0n}, precision);
+  })();
+
+  const result = (() => {
+    if(lessThan(E, budget)) {
+      const y_0 = gaussian_pdf({argument: a, mean, stddev, precision});
+      const y_1 = gaussian_pdf({argument: b, mean, stddev, precision});
+      return mul(div(add(y_0, y_1), {mantissa: 2n, exponent: 0n}, precision), sub(b, a));
+    } else {
+      const mid = div(add(a, b), {mantissa: 2n, exponent: 0n}, precision);
+      const new_budget = div(budget, {mantissa: 2n, exponent: 0n}, precision);
+      const a_1 = adaptive_quadrature_gaussian({a, b: mid, mean, stddev, precision, budget: new_budget});
+      const a_2 = adaptive_quadrature_gaussian({a: mid, b, mean, stddev, precision, budget: new_budget});
+      return add(a_1, a_2);
+    }
+  })();
+
+  return {...result, mantissa: final_multiplier * result.mantissa};
+}
+
 function gaussian_cdf({argument: arg_1, mean, stddev, precision}) {
-  const helper = (arg_2, precision_2) => (gaussian_pdf({argument: arg_2, mean, stddev, precision: precision_2}));
+//  const helper = (arg_2, precision_2) => (gaussian_pdf({argument: arg_2, mean, stddev, precision: precision_2}));
+//  if(lessThan(arg_1, mean))
+//    return add(adaptiveRiemannIntegration(helper, mean, arg_1, precision), {mantissa: 5n, exponent: -1n});
+//  else
+//    return add(adaptiveRiemannIntegration(helper, sub(add(mean,mean), arg_1), mean, precision), {mantissa: 5n, exponent: -1n});
+
+  const budget = {mantissa: 1n, exponent: -precision-3n};
+
   if(lessThan(arg_1, mean))
-    return add(adaptiveRiemannIntegration(helper, mean, arg_1, precision), {mantissa: 5n, exponent: -1n});
+    return add(adaptive_quadrature_gaussian({a: mean, b: arg_1, precision: precision+3n, budget, mean, stddev}), {mantissa: 5n, exponent: -1n});
   else
-    return add(adaptiveRiemannIntegration(helper, sub(add(mean,mean), arg_1), mean, precision), {mantissa: 5n, exponent: -1n});
+    return add(adaptive_quadrature_gaussian({a: sub(add(mean,mean), arg_1), b: mean, precision: precision+3n, budget, mean, stddev}), {mantissa: 5n, exponent: -1n});
 }
