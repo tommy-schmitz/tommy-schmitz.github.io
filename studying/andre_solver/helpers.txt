@@ -47,7 +47,7 @@ function sub(a, b) {
 }
 
 function exp(x, precision) {
-    console.log('exp()', {x, precision});
+//    console.log('exp()', {x, precision});
     const scale = 10n ** (BigInt(precision) + 3n);
     let term = scale;
     let result = scale;
@@ -64,13 +64,13 @@ function exp(x, precision) {
     })();
 
     let i = 0n;
-    const MAX_ITER = 1000n;
+    const MAX_ITER = 10000n;
     while (term !== 0n) {
         if(i >= MAX_ITER)
             throw new Error('too many iterations in exp');
         i += 1n;
 
-        console.log('exp',{term,n,result,scale,xScaled,x,precision});
+//        console.log('exp',{term,n,result,scale,xScaled,x,precision});
         term = (term * xScaled) / (n * scale);
         if (term === 0n) break;
         result += term;
@@ -351,7 +351,7 @@ function adaptiveRiemannIntegration(func, a, b, precision) {
 
 function abs(x) {return {...x, mantissa: ((x.mantissa < 0n) ? -x.mantissa : x.mantissa)};}
 
-function adaptive_quadrature_gaussian({a, b, mean, stddev, precision, budget}) {
+function adaptive_quadrature_gaussian({a, b, mean, stddev, precision, budget, top = true}) {
   let final_multiplier = 1n;
   if(lessThan(b, a))
     [a,b,final_multiplier] = [b,a,-1n];
@@ -380,21 +380,30 @@ function adaptive_quadrature_gaussian({a, b, mean, stddev, precision, budget}) {
     return div(mul(K, cube), {mantissa: 12n, exponent: 0n}, precision);
   })();
 
-  const result = (() => {
+  const intermediate = (() => {
     if(lessThan(E, budget)) {
       const y_0 = gaussian_pdf({argument: a, mean, stddev, precision});
       const y_1 = gaussian_pdf({argument: b, mean, stddev, precision});
-      return mul(div(add(y_0, y_1), {mantissa: 2n, exponent: 0n}, precision), sub(b, a));
+      const result = mul(div(add(y_0, y_1), {mantissa: 2n, exponent: 0n}, precision), sub(b, a));
+//      console.log('aqg', {a, b, result, K, E, budget});
+      return {result, count: 1};
     } else {
       const mid = div(add(a, b), {mantissa: 2n, exponent: 0n}, precision);
       const new_budget = div(budget, {mantissa: 2n, exponent: 0n}, precision);
-      const a_1 = adaptive_quadrature_gaussian({a, b: mid, mean, stddev, precision, budget: new_budget});
-      const a_2 = adaptive_quadrature_gaussian({a: mid, b, mean, stddev, precision, budget: new_budget});
-      return add(a_1, a_2);
+      const {result: a_1, count: count_1} = adaptive_quadrature_gaussian({a, b: mid, mean, stddev, precision, budget: new_budget, top: false});
+      const {result: a_2, count: count_2} = adaptive_quadrature_gaussian({a: mid, b, mean, stddev, precision, budget: new_budget, top: false});
+      return {result: add(a_1, a_2), count: count_1 + count_2};
     }
   })();
 
-  return {...result, mantissa: final_multiplier * result.mantissa};
+  const result_value = {...intermediate.result, mantissa: final_multiplier * intermediate.result.mantissa};
+
+  if(top) {
+    console.log('quadrature count', intermediate.count);
+    return result_value;
+  } else {
+    return {...intermediate, result: result_value};
+  }
 }
 
 function gaussian_cdf({argument: arg_1, mean, stddev, precision}) {
@@ -419,9 +428,17 @@ function render({mantissa, exponent}) {
 }
 
 function main() {
-  const precision = 10n + 3n;
+  const precision = 5n + 3n;
   const stddev = pow({mantissa: 243n, exponent: -4n}, {mantissa: 5n, exponent: -1n}, precision);
-  const answer = adaptive_quadrature_gaussian({b: {mantissa: -625n, exponent: -3n}, a: {mantissa: -25n, exponent: -1n}, mean: {mantissa: -36n, exponent: -1n}, stddev, precision, budget: {mantissa: 1n, exponent: precision}})
+  const mean = {mantissa: -36n, exponent: -1n};
+
+  //const a = {mantissa: -25n, exponent: -1n};
+  //const b = {mantissa: 625n, exponent: -3n};
+
+  const a = mean;
+  const b = {mantissa: -25n, exponent: -1n};
+
+  const answer = adaptive_quadrature_gaussian({b, a, mean, stddev, precision, budget: {mantissa: 1n, exponent: -precision}});
   console.log('answer', render(answer));
   console.log('x1', render({mantissa: 12345n, exponent: 3n}));
   console.log('x2', render({mantissa: 12345n, exponent: -3n}));
