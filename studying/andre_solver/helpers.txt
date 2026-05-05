@@ -47,7 +47,7 @@ function sub(a, b) {
 }
 
 function exp(x, precision) {
-//    console.log('exp()', {x, precision});
+    console.log('exp()', {x, precision});
     const scale = 10n ** (BigInt(precision) + 3n);
     let term = scale;
     let result = scale;
@@ -63,7 +63,14 @@ function exp(x, precision) {
         return x.mantissa / (10n ** -expt);
     })();
 
+    let i = 0n;
+    const MAX_ITER = 1000n;
     while (term !== 0n) {
+        if(i >= MAX_ITER)
+            throw new Error('too many iterations in exp');
+        i += 1n;
+
+        console.log('exp',{term,n,result,scale,xScaled,x,precision});
         term = (term * xScaled) / (n * scale);
         if (term === 0n) break;
         result += term;
@@ -404,3 +411,20 @@ function gaussian_cdf({argument: arg_1, mean, stddev, precision}) {
   else
     return add(adaptive_quadrature_gaussian({a: sub(add(mean,mean), arg_1), b: mean, precision: precision+3n, budget, mean, stddev}), {mantissa: 5n, exponent: -1n});
 }
+
+function render({mantissa, exponent}) {
+  const str = mantissa + '';
+  const len = str.length;
+  return `${str[0]}.${str.slice(1)} * 10 ^ ${exponent + BigInt(len) - 1n}`;
+}
+
+function main() {
+  const precision = 10n + 3n;
+  const stddev = pow({mantissa: 243n, exponent: -4n}, {mantissa: 5n, exponent: -1n}, precision);
+  const answer = adaptive_quadrature_gaussian({b: {mantissa: -625n, exponent: -3n}, a: {mantissa: -25n, exponent: -1n}, mean: {mantissa: -36n, exponent: -1n}, stddev, precision, budget: {mantissa: 1n, exponent: precision}})
+  console.log('answer', render(answer));
+  console.log('x1', render({mantissa: 12345n, exponent: 3n}));
+  console.log('x2', render({mantissa: 12345n, exponent: -3n}));
+}
+
+main();
